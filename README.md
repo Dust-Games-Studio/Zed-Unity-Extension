@@ -228,6 +228,9 @@ Manual Zed check:
 
 ## Future work
 
+See [ROADMAP.md](ROADMAP.md) for the semantic-completion plan (UXML, `.asmdef`, USS,
+and C#-aware features).
+
 - `.meta` automation requires a Unity Editor package or a language server using
   `workspace/willRenameFiles`; it is not part of this extension.
 - `.shadergraph`, `.shadersubgraph`, and `.inputactions` support are candidate future
