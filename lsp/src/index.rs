@@ -83,6 +83,7 @@ pub struct ProjectIndex {
 }
 
 impl ProjectIndex {
+    #[allow(dead_code)]
     pub fn new(
         root: PathBuf,
         files: Vec<IndexedFile>,
@@ -112,10 +113,7 @@ impl ProjectIndex {
                     .push(index);
             }
             if let Some(guid) = &file.guid {
-                self.guid_index
-                    .entry(guid.clone())
-                    .or_default()
-                    .push(index);
+                self.guid_index.entry(guid.clone()).or_default().push(index);
             }
         }
     }
@@ -213,7 +211,9 @@ impl WorkspaceIndex {
             *existing = file;
         } else {
             project.files.push(file);
-            project.files.sort_by(|left, right| left.path.cmp(&right.path));
+            project
+                .files
+                .sort_by(|left, right| left.path.cmp(&right.path));
         }
         project.rebuild_indexes();
         true
@@ -229,13 +229,6 @@ impl WorkspaceIndex {
         project.dlls.retain(|dll| dll.path != path);
         project.rebuild_indexes();
         before != project.files.len()
-    }
-
-    pub fn project_roots(&self) -> Vec<PathBuf> {
-        self.projects
-            .iter()
-            .map(|project| project.root.clone())
-            .collect()
     }
 }
 
@@ -307,7 +300,9 @@ pub fn build_project(root: &Path, open_documents: &HashMap<PathBuf, String>) -> 
         );
     }
 
-    project.files.sort_by(|left, right| left.path.cmp(&right.path));
+    project
+        .files
+        .sort_by(|left, right| left.path.cmp(&right.path));
     project
         .dlls
         .sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
@@ -397,10 +392,12 @@ fn read_packages(project_root: &Path) -> Vec<PackageInfo> {
     if let Some(manifest) = read_json(&project_root.join("Packages/manifest.json")) {
         if let Some(dependencies) = manifest.get("dependencies").and_then(Value::as_object) {
             for (name, value) in dependencies {
-                let version = value
-                    .as_str()
-                    .map(str::to_string)
-                    .or_else(|| value.get("version").and_then(Value::as_str).map(str::to_string));
+                let version = value.as_str().map(str::to_string).or_else(|| {
+                    value
+                        .get("version")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                });
                 packages.insert(
                     name.clone(),
                     PackageInfo {
@@ -457,7 +454,10 @@ fn package_cache_dirs(project_root: &Path, packages: &[PackageInfo]) -> Vec<Path
     let Ok(entries) = fs::read_dir(&cache) else {
         return Vec::new();
     };
-    let names: HashSet<&str> = packages.iter().map(|package| package.name.as_str()).collect();
+    let names: HashSet<&str> = packages
+        .iter()
+        .map(|package| package.name.as_str())
+        .collect();
 
     let mut dirs = Vec::new();
     for entry in entries.flatten() {
@@ -510,7 +510,10 @@ mod tests {
     fn fixture() -> tempfile::TempDir {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
-        write(&root.join("ProjectSettings/ProjectVersion.txt"), "m_EditorVersion: 6000.6.6f1");
+        write(
+            &root.join("ProjectSettings/ProjectVersion.txt"),
+            "m_EditorVersion: 6000.6.6f1",
+        );
         write(
             &root.join("Packages/manifest.json"),
             r#"{ "dependencies": { "com.unity.inputsystem": "1.20.1" } }"#,
@@ -545,7 +548,9 @@ mod tests {
             "fileFormatVersion: 2\nguid: cccccccccccccccccccccccccccccccc\n",
         );
         write(
-            &root.join("Library/PackageCache/com.unity.inputsystem@abc/InputSystem/Unity.InputSystem.dll"),
+            &root.join(
+                "Library/PackageCache/com.unity.inputsystem@abc/InputSystem/Unity.InputSystem.dll",
+            ),
             "",
         );
         write(
@@ -575,11 +580,26 @@ mod tests {
         assert_eq!(input_system.len(), 1);
         assert!(input_system[0].external);
 
-        assert_eq!(project.find_by_name("Game.Runtime")[0].guid.as_deref(), Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
-        assert_eq!(project.find_by_guid("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")[0].name(), Some("Shared"));
-        assert!(project.dlls.iter().any(|dll| dll.name == "Newtonsoft.Json.dll"));
-        assert!(project.dlls.iter().any(|dll| dll.name == "Unity.InputSystem.dll"));
-        assert!(project.packages.iter().any(|package| package.name == "com.unity.inputsystem"));
+        assert_eq!(
+            project.find_by_name("Game.Runtime")[0].guid.as_deref(),
+            Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        );
+        assert_eq!(
+            project.find_by_guid("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")[0].name(),
+            Some("Shared")
+        );
+        assert!(project
+            .dlls
+            .iter()
+            .any(|dll| dll.name == "Newtonsoft.Json.dll"));
+        assert!(project
+            .dlls
+            .iter()
+            .any(|dll| dll.name == "Unity.InputSystem.dll"));
+        assert!(project
+            .packages
+            .iter()
+            .any(|package| package.name == "com.unity.inputsystem"));
     }
 
     #[test]
@@ -626,6 +646,9 @@ mod tests {
         );
         let index = build(&[temp.path().to_path_buf()], &HashMap::new());
         assert_eq!(index.projects.len(), 1);
-        assert_eq!(index.projects[0].find_by_name("Game")[0].name(), Some("Game"));
+        assert_eq!(
+            index.projects[0].find_by_name("Game")[0].name(),
+            Some("Game")
+        );
     }
 }

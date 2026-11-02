@@ -3,9 +3,7 @@ use std::path::Path;
 use jsonc_parser::{
     ast::{Object, Value},
     common::{Range as JsonRange, Ranged},
-    parse_to_ast,
-    CollectOptions,
-    ParseOptions,
+    parse_to_ast, CollectOptions, ParseOptions,
 };
 use tower_lsp::lsp_types::DiagnosticSeverity;
 
@@ -40,6 +38,7 @@ pub struct VersionDefine {
     pub define: Option<SpannedString>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct AsmdefData {
     pub name: Option<SpannedString>,
@@ -96,16 +95,8 @@ pub struct ParsedFile {
     pub asmdef: Option<AsmdefData>,
     pub asmref: Option<AsmrefData>,
     pub diagnostics: Vec<RawDiagnostic>,
+    #[allow(dead_code)]
     pub valid_json: bool,
-}
-
-impl ParsedFile {
-    pub fn data_name(&self) -> Option<&SpannedString> {
-        match self.kind {
-            FileKind::Asmdef => self.asmdef.as_ref().and_then(|data| data.name.as_ref()),
-            FileKind::Asmref => None,
-        }
-    }
 }
 
 pub fn parse_file(path: &Path, text: &str) -> ParsedFile {
@@ -236,7 +227,12 @@ fn spanned_string(literal: &jsonc_parser::ast::StringLit<'_>, text: &str) -> Spa
     }
 }
 
-fn missing_field(diagnostics: &mut Vec<RawDiagnostic>, range: JsonRange, code: &'static str, key: &str) {
+fn missing_field(
+    diagnostics: &mut Vec<RawDiagnostic>,
+    range: JsonRange,
+    code: &'static str,
+    key: &str,
+) {
     diagnostics.push(RawDiagnostic::error(
         TextRange::new(range.start, range.start),
         code,
@@ -316,12 +312,7 @@ fn parse_asmdef_object(
 ) -> AsmdefData {
     let name = string_field(object, "name", text, diagnostics);
     if object.get("name").is_none() {
-        missing_field(
-            diagnostics,
-            object.range,
-            "asmdef.missing-name",
-            "name",
-        );
+        missing_field(diagnostics, object.range, "asmdef.missing-name", "name");
     } else if let Some(name) = &name {
         if name.value.is_empty() {
             diagnostics.push(RawDiagnostic::error(
@@ -532,8 +523,14 @@ mod tests {
         assert_eq!(data.references[0].value, "GUID:abc");
         assert_eq!(data.include_platforms[0].value, "Editor");
         assert_eq!(data.precompiled_references[0].value, "Newtonsoft.Json.dll");
-        assert_eq!(data.version_defines[0].name.as_ref().unwrap().value, "com.unity.inputsystem");
-        assert_eq!(data.version_defines[0].define.as_ref().unwrap().value, "HAS_INPUT");
+        assert_eq!(
+            data.version_defines[0].name.as_ref().unwrap().value,
+            "com.unity.inputsystem"
+        );
+        assert_eq!(
+            data.version_defines[0].define.as_ref().unwrap().value,
+            "HAS_INPUT"
+        );
     }
 
     #[test]
@@ -601,7 +598,11 @@ mod tests {
     fn reads_guid_from_meta_file() {
         let temp = tempfile::tempdir().unwrap();
         let meta = temp.path().join("Game.asmdef.meta");
-        std::fs::write(&meta, "fileFormatVersion: 2\nguid: 17b36165d09634a48bf5a0e4bb27f4bd\n").unwrap();
+        std::fs::write(
+            &meta,
+            "fileFormatVersion: 2\nguid: 17b36165d09634a48bf5a0e4bb27f4bd\n",
+        )
+        .unwrap();
         assert_eq!(
             read_guid(&meta).as_deref(),
             Some("17b36165d09634a48bf5a0e4bb27f4bd")

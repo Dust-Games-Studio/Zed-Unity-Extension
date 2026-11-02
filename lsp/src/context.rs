@@ -109,15 +109,20 @@ pub fn completion_context(text: &str, offset: usize) -> Option<CompletionContext
         match bytes[index] {
             b'"' => {
                 let (end, terminated) = scan_string(bytes, index);
-                let cursor_inside = index < offset && if terminated {
-                    offset < end
-                } else {
-                    offset <= text.len()
-                };
+                let cursor_inside = index < offset
+                    && if terminated {
+                        offset < end
+                    } else {
+                        offset <= text.len()
+                    };
 
                 if cursor_inside {
                     let content_start = index + 1;
-                    let content_end = if terminated { end.saturating_sub(1) } else { offset };
+                    let content_end = if terminated {
+                        end.saturating_sub(1)
+                    } else {
+                        offset
+                    };
                     let prefix = text
                         .get(content_start..offset)
                         .unwrap_or_default()
@@ -316,7 +321,12 @@ fn scan_string(bytes: &[u8], start: usize) -> (usize, bool) {
 
 fn scan_scalar(bytes: &[u8], start: usize) -> usize {
     let mut index = start;
-    while index < bytes.len() && !matches!(bytes[index], b',' | b']' | b'}' | b' ' | b'\t' | b'\r' | b'\n') {
+    while index < bytes.len()
+        && !matches!(
+            bytes[index],
+            b',' | b']' | b'}' | b' ' | b'\t' | b'\r' | b'\n'
+        )
+    {
         index += 1;
     }
     index
@@ -383,10 +393,7 @@ mod tests {
             index.position_to_offset(text, Position::new(99, 99)),
             text.len()
         );
-        assert_eq!(
-            index.offset_to_position(text, 999),
-            Position::new(0, 5)
-        );
+        assert_eq!(index.offset_to_position(text, 999), Position::new(0, 5));
     }
 
     fn context_at(text: &str, cursor_text: &str) -> Option<CompletionContext> {
@@ -400,7 +407,10 @@ mod tests {
         assert_eq!(closed.kind, CompletionKind::References);
         assert_eq!(closed.prefix, "Sha");
         assert!(closed.in_string);
-        assert_eq!(&r#"{"references":["Sha"]}"#[closed.replace.start..closed.replace.end], "Sha");
+        assert_eq!(
+            &r#"{"references":["Sha"]}"#[closed.replace.start..closed.replace.end],
+            "Sha"
+        );
 
         let unclosed = context_at(r#"{"references":["Sha"#, "Sha").unwrap();
         assert_eq!(unclosed.kind, CompletionKind::References);
@@ -411,32 +421,39 @@ mod tests {
     #[test]
     fn completes_platforms_version_defines_and_precompiled_references() {
         assert_eq!(
-            context_at(r#"{"includePlatforms":["Ed"]}"#, "Ed").unwrap().kind,
+            context_at(r#"{"includePlatforms":["Ed"]}"#, "Ed")
+                .unwrap()
+                .kind,
             CompletionKind::IncludePlatforms
         );
         assert_eq!(
-            context_at(r#"{"excludePlatforms":["i"]}"#, "i").unwrap().kind,
+            context_at(r#"{"excludePlatforms":["i"]}"#, "i")
+                .unwrap()
+                .kind,
             CompletionKind::ExcludePlatforms
         );
         assert_eq!(
-            context_at(r#"{"precompiledReferences":["New"]}"#, "New").unwrap().kind,
+            context_at(r#"{"precompiledReferences":["New"]}"#, "New")
+                .unwrap()
+                .kind,
             CompletionKind::PrecompiledReferences
         );
         assert_eq!(
-            context_at(r#"{"versionDefines":[{"name":"com.uni"}]}"#, "com.uni").unwrap().kind,
+            context_at(r#"{"versionDefines":[{"name":"com.uni"}]}"#, "com.uni")
+                .unwrap()
+                .kind,
             CompletionKind::VersionDefineName
         );
     }
 
     #[test]
     fn completes_keys_in_the_right_object() {
-        let top = context_at(r#"{"na"# , "na").unwrap();
+        let top = context_at(r#"{"na"#, "na").unwrap();
         assert_eq!(top.kind, CompletionKind::TopLevelKey);
         assert_eq!(top.prefix, "na");
 
         let after_comma_text = r#"{"name":"Game","#;
-        let after_comma =
-            completion_context(after_comma_text, after_comma_text.len()).unwrap();
+        let after_comma = completion_context(after_comma_text, after_comma_text.len()).unwrap();
         assert_eq!(after_comma.kind, CompletionKind::TopLevelKey);
         assert!(!after_comma.in_string);
 

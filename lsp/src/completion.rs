@@ -18,12 +18,24 @@ const ASMDEF_KEYS: &[(&str, &str)] = &[
     ("includePlatforms", "Platforms that include this assembly"),
     ("excludePlatforms", "Platforms that exclude this assembly"),
     ("allowUnsafeCode", "Allow unsafe C# code"),
-    ("overrideReferences", "Override automatic precompiled references"),
+    (
+        "overrideReferences",
+        "Override automatic precompiled references",
+    ),
     ("precompiledReferences", "Precompiled DLL references"),
-    ("autoReferenced", "Automatically referenced by predefined assemblies"),
-    ("defineConstraints", "Preprocessor symbols required to compile"),
+    (
+        "autoReferenced",
+        "Automatically referenced by predefined assemblies",
+    ),
+    (
+        "defineConstraints",
+        "Preprocessor symbols required to compile",
+    ),
     ("versionDefines", "Package-version-based defines"),
-    ("noEngineReferences", "Do not reference UnityEngine or UnityEditor"),
+    (
+        "noEngineReferences",
+        "Do not reference UnityEngine or UnityEditor",
+    ),
 ];
 
 const ASMREF_KEYS: &[(&str, &str)] = &[("reference", "Assembly to reference")];
@@ -61,12 +73,8 @@ pub fn completions(
         CompletionKind::IncludePlatforms | CompletionKind::ExcludePlatforms => {
             platform_items(&context, text, &line_index)
         }
-        CompletionKind::VersionDefineName => {
-            package_items(project, &context, text, &line_index)
-        }
-        CompletionKind::PrecompiledReferences => {
-            dll_items(project, &context, text, &line_index)
-        }
+        CompletionKind::VersionDefineName => package_items(project, &context, text, &line_index),
+        CompletionKind::PrecompiledReferences => dll_items(project, &context, text, &line_index),
         CompletionKind::TopLevelKey => {
             let keys = if file_kind == FileKind::Asmref {
                 ASMREF_KEYS

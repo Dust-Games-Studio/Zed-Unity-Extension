@@ -36,7 +36,7 @@ pub const PLATFORMS: &[&str] = &[
 ];
 
 pub fn is_known(platform: &str) -> bool {
-    PLATFORMS.iter().any(|known| *known == platform)
+    PLATFORMS.contains(&platform)
 }
 
 #[cfg(test)]
@@ -58,6 +58,12 @@ mod tests {
             assert!(is_known(platform), "missing {platform}");
         }
         assert!(!is_known("Andriod"));
-        assert_eq!(PLATFORMS.len(), PLATFORMS.iter().collect::<std::collections::HashSet<_>>().len());
+        assert_eq!(
+            PLATFORMS.len(),
+            PLATFORMS
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+        );
     }
 }

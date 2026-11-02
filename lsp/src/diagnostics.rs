@@ -1,9 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use tower_lsp::lsp_types::{
-    Diagnostic, DiagnosticSeverity, NumberOrString, Url,
-};
+use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, NumberOrString, Url};
 
 use crate::context::LineIndex;
 use crate::index::{IndexedFile, ProjectIndex, WorkspaceIndex};
@@ -47,10 +45,7 @@ fn project_diagnostics(project: &ProjectIndex) -> HashMap<PathBuf, Vec<RawDiagno
     let mut all_by_guid: HashMap<String, Vec<&IndexedFile>> = HashMap::new();
     for file in project.assemblies() {
         if let Some(name) = file.name() {
-            all_by_name
-                .entry(name.to_string())
-                .or_default()
-                .push(file);
+            all_by_name.entry(name.to_string()).or_default().push(file);
         }
         if let Some(guid) = &file.guid {
             all_by_guid
@@ -374,7 +369,10 @@ mod tests {
         )]);
         let codes = codes(&index, "/project/Assets/Game.asmdef");
         assert_eq!(
-            codes.iter().filter(|code| *code == "asmdef.unresolved-reference").count(),
+            codes
+                .iter()
+                .filter(|code| *code == "asmdef.unresolved-reference")
+                .count(),
             2
         );
     }
@@ -382,7 +380,10 @@ mod tests {
     #[test]
     fn resolves_project_and_external_references() {
         let index = workspace(vec![
-            file("/project/Assets/Game.asmdef", r#"{ "name": "Game", "references": ["Shared", "Unity.InputSystem"] }"#),
+            file(
+                "/project/Assets/Game.asmdef",
+                r#"{ "name": "Game", "references": ["Shared", "Unity.InputSystem"] }"#,
+            ),
             file("/project/Assets/Shared.asmdef", r#"{ "name": "Shared" }"#),
             external(
                 "/project/Library/PackageCache/com.unity.inputsystem@abc/Unity.InputSystem.asmdef",
@@ -397,18 +398,29 @@ mod tests {
         let index = workspace(vec![
             file("/project/Assets/A.asmdef", r#"{ "name": "Duplicate" }"#),
             file("/project/Assets/B.asmdef", r#"{ "name": "Duplicate" }"#),
-            external("/project/Assets/Package.asmdef", r#"{ "name": "Duplicate" }"#),
+            external(
+                "/project/Assets/Package.asmdef",
+                r#"{ "name": "Duplicate" }"#,
+            ),
         ]);
-        assert!(codes(&index, "/project/Assets/A.asmdef").contains(&"asmdef.duplicate-name".to_string()));
-        assert!(codes(&index, "/project/Assets/B.asmdef").contains(&"asmdef.duplicate-name".to_string()));
+        assert!(codes(&index, "/project/Assets/A.asmdef")
+            .contains(&"asmdef.duplicate-name".to_string()));
+        assert!(codes(&index, "/project/Assets/B.asmdef")
+            .contains(&"asmdef.duplicate-name".to_string()));
         assert!(codes(&index, "/project/Assets/Package.asmdef").is_empty());
     }
 
     #[test]
     fn reports_reference_cycles() {
         let index = workspace(vec![
-            file("/project/Assets/A.asmdef", r#"{ "name": "A", "references": ["B"] }"#),
-            file("/project/Assets/B.asmdef", r#"{ "name": "B", "references": ["A"] }"#),
+            file(
+                "/project/Assets/A.asmdef",
+                r#"{ "name": "A", "references": ["B"] }"#,
+            ),
+            file(
+                "/project/Assets/B.asmdef",
+                r#"{ "name": "B", "references": ["A"] }"#,
+            ),
         ]);
         let a = codes(&index, "/project/Assets/A.asmdef");
         let b = codes(&index, "/project/Assets/B.asmdef");
@@ -420,7 +432,10 @@ mod tests {
     fn reports_missing_asmref_targets() {
         let index = workspace(vec![
             file("/project/Assets/Game.asmdef", r#"{ "name": "Game" }"#),
-            file("/project/Assets/Ref.asmref", r#"{ "reference": "Missing" }"#),
+            file(
+                "/project/Assets/Ref.asmref",
+                r#"{ "reference": "Missing" }"#,
+            ),
         ]);
         assert_eq!(
             codes(&index, "/project/Assets/Ref.asmref"),
@@ -434,8 +449,10 @@ mod tests {
             file("/project/Assets/Broken.asmdef", r#"{ "name": }"#),
             file("/project/Assets/NoName.asmdef", r#"{ "references": [] }"#),
         ]);
-        assert!(codes(&index, "/project/Assets/Broken.asmdef").contains(&"asmdef.parse-error".to_string()));
-        assert!(codes(&index, "/project/Assets/NoName.asmdef").contains(&"asmdef.missing-name".to_string()));
+        assert!(codes(&index, "/project/Assets/Broken.asmdef")
+            .contains(&"asmdef.parse-error".to_string()));
+        assert!(codes(&index, "/project/Assets/NoName.asmdef")
+            .contains(&"asmdef.missing-name".to_string()));
     }
 
     #[test]
@@ -444,6 +461,10 @@ mod tests {
             "/project/Library/PackageCache/pkg@abc/Package.asmdef",
             r#"{ "name": }"#,
         )]);
-        assert!(codes(&index, "/project/Library/PackageCache/pkg@abc/Package.asmdef").is_empty());
+        assert!(codes(
+            &index,
+            "/project/Library/PackageCache/pkg@abc/Package.asmdef"
+        )
+        .is_empty());
     }
 }

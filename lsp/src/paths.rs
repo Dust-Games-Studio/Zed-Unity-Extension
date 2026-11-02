@@ -59,11 +59,7 @@ pub fn discover_unity_projects(workspace_roots: &[PathBuf], max_depth: usize) ->
 }
 
 pub fn project_root_for_file(file: &Path) -> Option<PathBuf> {
-    let start = if file.is_dir() {
-        file
-    } else {
-        file.parent()?
-    };
+    let start = if file.is_dir() { file } else { file.parent()? };
 
     for ancestor in start.ancestors() {
         if is_unity_project(ancestor) {
@@ -91,7 +87,11 @@ mod tests {
         assert!(!is_unity_project(temp.path()));
 
         fs::create_dir_all(temp.path().join("ProjectSettings")).unwrap();
-        fs::write(temp.path().join("ProjectSettings/ProjectVersion.txt"), "m_EditorVersion: 6000.6.6f1").unwrap();
+        fs::write(
+            temp.path().join("ProjectSettings/ProjectVersion.txt"),
+            "m_EditorVersion: 6000.6.6f1",
+        )
+        .unwrap();
         assert!(is_unity_project(temp.path()));
 
         let nested = temp.path().join("Packages");

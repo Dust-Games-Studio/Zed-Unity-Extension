@@ -4,14 +4,8 @@ use std::io::Read;
 
 use sha2::{Digest, Sha256};
 use zed_extension_api::{
-    self as zed,
-    settings::LspSettings,
-    Architecture,
-    DownloadedFileType,
-    LanguageServerId,
-    LanguageServerInstallationStatus,
-    Os,
-    Result,
+    self as zed, settings::LspSettings, Architecture, DownloadedFileType, LanguageServerId,
+    LanguageServerInstallationStatus, Os, Result,
 };
 
 const LSP_NAME: &str = "unity-asmdef";
@@ -125,7 +119,7 @@ fn install_binary(language_server_id: &LanguageServerId) -> Result<String> {
     let result = download_and_verify(
         &binary_asset.download_url,
         &checksums_asset.download_url,
-        &asset,
+        asset,
         &download_dir,
         &version_dir,
     );
@@ -216,7 +210,8 @@ fn parse_sha256sums(contents: &str) -> HashMap<String, String> {
 }
 
 fn sha256_file(path: &str) -> Result<String> {
-    let mut file = fs::File::open(path).map_err(|error| format!("failed to open {path}: {error}"))?;
+    let mut file =
+        fs::File::open(path).map_err(|error| format!("failed to open {path}: {error}"))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0; 1 << 16];
     loop {
