@@ -1,0 +1,62 @@
+[
+  {
+    "label": "Unity: Recompile scripts",
+    "command": "unity",
+    "args": ["recompile", "--project-path", "$ZED_WORKTREE_ROOT", "--timeout", "120"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "center",
+    "hide": "on_success",
+    "shell": "system",
+    "save": "all"
+  },
+  {
+    "label": "Unity: Run EditMode tests",
+    "command": "unity",
+    "args": ["test", "$ZED_WORKTREE_ROOT", "--mode", "EditMode", "--output", "$ZED_WORKTREE_ROOT/Logs/zed-editmode-results.xml"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "center",
+    "hide": "never",
+    "shell": "system",
+    "save": "all"
+  },
+  {
+    "label": "Unity: Run PlayMode tests",
+    "command": "unity",
+    "args": ["test", "$ZED_WORKTREE_ROOT", "--mode", "PlayMode", "--output", "$ZED_WORKTREE_ROOT/Logs/zed-playmode-results.xml"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "center",
+    "hide": "never",
+    "shell": "system",
+    "save": "all"
+  },
+  {
+    "label": "Unity: Check .meta pairing",
+    "command": "unity",
+    "args": ["vcs", "status", "--project-path", "$ZED_WORKTREE_ROOT"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "center",
+    "hide": "on_success",
+    "shell": "system",
+    "save": "none"
+  },
+  {
+    "label": "Unity: Editor status",
+    "command": "unity",
+    "args": ["status", "--project-path", "$ZED_WORKTREE_ROOT"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "center",
+    "hide": "on_success",
+    "shell": "system",
+    "save": "none"
+  }
+]
