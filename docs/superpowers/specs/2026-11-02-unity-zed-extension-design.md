@@ -232,7 +232,8 @@ they are ordinary YAML documents.
 **Outline**
 
 - One outline item per element, labelled by its tag name.
-- The element's `name` attribute captured as context when present.
+- The `name` attribute is highlighted in the editor but is not used as outline context
+  in v1.
 
 **Brackets / indentation**
 
@@ -365,8 +366,9 @@ Task behavior:
   checks.
 - `shell: "system"`, `use_new_terminal: false`, `allow_concurrent_runs: false`.
 - `cwd` defaults to the project root; the explicit `--project-path` keeps the task
-  correct when Zed's worktree root differs from the Unity project root (for example, a
-  monorepo containing the Unity project in a subdirectory).
+  correct when the Unity project is the Zed worktree root. For a Unity project nested in
+  a monorepo, copy the tasks into `.zed/tasks.json` and change `--project-path`, or open
+  the Unity project folder as the worktree.
 
 ## 8. Repository layout
 
@@ -470,7 +472,7 @@ Fixtures use realistic Unity content, not toy snippets:
   pseudo-classes).
 - `.tss` with an `@import`.
 - `.shader` with Properties, SubShader, Tags, render states, a Stencil block, a
-  CGPROGRAM block, and Fallback.
+  CGPROGRAM block, an HLSLPROGRAM block, and Fallback.
 
 ### 9.3 Manual validation in Zed
 
