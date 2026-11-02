@@ -30,8 +30,28 @@ binaries. C# remains handled by Zed's official C# extension.
 
 ## Installation
 
-Install **Unity** from the Zed extension registry, or install this repository as a dev
-extension with `zed: install dev extension`.
+### From the Zed extension registry
+
+> The registry submission for this extension is pending. Until it is accepted, use the
+> dev-extension flow below.
+
+Open the Extensions view with `cmd-shift-x` (macOS) or `ctrl-shift-x` (Linux/Windows),
+search for **Unity**, and install it. To install it automatically on new machines, add it
+to your Zed settings:
+
+```json
+{
+  "auto_install_extensions": {
+    "unity": true
+  }
+}
+```
+
+### As a dev extension
+
+1. Clone this repository.
+2. In Zed, run `zed: install dev extension` and select the repository root.
+3. Open a supported Unity file and confirm the language mode in the status bar.
 
 C# support is separate. Install Zed's official **C#** extension and configure one of its
 language servers (Roslyn is the current default). See the
@@ -185,6 +205,16 @@ Useful modes:
 The script is local-only. It clones each pinned grammar into `tests/.grammars/`
 (gitignored) and validates every language config and `.scm` query against its fixtures.
 
+Publishing preflight:
+
+```bash
+./scripts/check-publish.sh
+./scripts/check-publish.sh --strict   # warnings become failures
+```
+
+Before opening the registry PR, also complete the checklist in
+[PUBLISHING.md](PUBLISHING.md).
+
 Manual Zed check:
 
 1. Install the repository as a dev extension.
@@ -204,9 +234,8 @@ Manual Zed check:
 
 ## Publishing
 
-The extension is published by making this repository public and adding it as a submodule
-at `extensions/unity` in `zed-industries/extensions`, with a `[unity]` entry in
-`extensions.toml`. The manifest must build in Zed's extension CI.
+See [PUBLISHING.md](PUBLISHING.md) for the preflight checklist, the exact
+`zed-industries/extensions` submodule and `extensions.toml` steps, and the update flow.
 
 ## License
 
