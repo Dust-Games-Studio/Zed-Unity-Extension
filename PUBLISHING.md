@@ -47,15 +47,15 @@ are rejected.
 
 ### Snippets
 
-`snippets/` is currently tracked but is not registered in `extension.toml`. The
-snippet workstream can register it later. Before submission, either:
+The Unity C# snippets under `snippets/` are registered in `extension.toml` and
+ship with the extension. Each file is named `csharp.json`, so Zed scopes it to the
+C# language. `check-publish.sh` verifies that every tracked snippet file is
+registered and that every registered file is tracked.
 
-- register the snippets in `extension.toml`, or
-- remove `snippets/` from the publishable commit so the submission contains only
-  the language extension.
-
-`check-publish.sh` prints a note while this directory is tracked and unregistered.
-It does not fail the preflight, but reviewers may question unused resources.
+The registry already lists `unity-snippets` as a separate extension. This extension
+intentionally includes the Unity snippets so users do not need two extensions. If the
+maintainers ask about the overlap, explain the consolidation or contribute the snippets
+upstream.
 
 ## Submit to `zed-industries/extensions`
 

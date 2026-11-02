@@ -1,5 +1,5 @@
 name = "Unity USS"
-grammar = "unity_css"
+grammar = "css"
 path_suffixes = ["uss", "tss"]
 block_comment = ["/* ", " */"]
 autoclose_before = ";:.,=}])>"

@@ -26,6 +26,8 @@ binaries. C# remains handled by Zed's official C# extension.
   sets, shaders, and shader properties.
 - Bracket matching and indentation tuned for each format.
 - Unity CLI tasks available from supported Unity files.
+- Unity C# snippets for common MonoBehaviour, lifecycle, physics, rendering, and editor
+  patterns (requires the official C# extension).
 - Optional embedded HLSL/CG highlighting in ShaderLab when an HLSL language is installed.
 
 ## Installation
@@ -226,7 +228,6 @@ Manual Zed check:
 
 ## Future work
 
-- Snippets are not included in this extension yet.
 - `.meta` automation requires a Unity Editor package or a language server using
   `workspace/willRenameFiles`; it is not part of this extension.
 - `.shadergraph`, `.shadersubgraph`, and `.inputactions` support are candidate future

@@ -14,31 +14,32 @@ command -v "$TS_BIN" >/dev/null 2>&1 || fail "tree-sitter CLI not found. Install
 command -v python3 >/dev/null 2>&1 || fail "python3 is required for TOML/JSON validation."
 python3 -c 'import tomllib' >/dev/null 2>&1 || fail "Python 3.11+ is required for TOML validation (tomllib)."
 
+# Grammar keys must match the parser symbol Zed exports (tree_sitter_<key>).
 grammar_repo() {
   case "$1" in
-    unity_json) echo "https://github.com/tree-sitter/tree-sitter-json" ;;
-    unity_yaml) echo "https://github.com/zed-industries/tree-sitter-yaml" ;;
-    unity_xml) echo "https://github.com/tree-sitter-grammars/tree-sitter-xml" ;;
-    unity_css) echo "https://github.com/tree-sitter/tree-sitter-css" ;;
-    unity_shaderlab) echo "https://github.com/msagca/tree-sitter-shaderlab" ;;
+    json) echo "https://github.com/tree-sitter/tree-sitter-json" ;;
+    yaml) echo "https://github.com/zed-industries/tree-sitter-yaml" ;;
+    xml) echo "https://github.com/tree-sitter-grammars/tree-sitter-xml" ;;
+    css) echo "https://github.com/tree-sitter/tree-sitter-css" ;;
+    shaderlab) echo "https://github.com/msagca/tree-sitter-shaderlab" ;;
     *) return 1 ;;
   esac
 }
 
 grammar_commit() {
   case "$1" in
-    unity_json) echo "254c42a6476413b776221e03982ac8ae159eeb72" ;;
-    unity_yaml) echo "baff0b51c64ef6a1fb1f8390f3ad6015b83ec13a" ;;
-    unity_xml) echo "5000ae8f22d11fbe93939b05c1e37cf21117162d" ;;
-    unity_css) echo "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f" ;;
-    unity_shaderlab) echo "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5" ;;
+    json) echo "254c42a6476413b776221e03982ac8ae159eeb72" ;;
+    yaml) echo "baff0b51c64ef6a1fb1f8390f3ad6015b83ec13a" ;;
+    xml) echo "5000ae8f22d11fbe93939b05c1e37cf21117162d" ;;
+    css) echo "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f" ;;
+    shaderlab) echo "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5" ;;
     *) return 1 ;;
   esac
 }
 
 grammar_subdir() {
   case "$1" in
-    unity_xml) echo "xml" ;;
+    xml) echo "xml" ;;
     *) echo "" ;;
   esac
 }
@@ -107,22 +108,22 @@ ensure_grammar() {
 
 fixture_grammar() {
   case "$1" in
-    *.asmdef|*.asmref) echo unity_json ;;
-    *.unity|*.prefab|*.asset|*.meta) echo unity_yaml ;;
-    *.uxml) echo unity_xml ;;
-    *.uss|*.tss) echo unity_css ;;
-    *.shader) echo unity_shaderlab ;;
+    *.asmdef|*.asmref) echo json ;;
+    *.unity|*.prefab|*.asset|*.meta) echo yaml ;;
+    *.uxml) echo xml ;;
+    *.uss|*.tss) echo css ;;
+    *.shader) echo shaderlab ;;
     *) return 1 ;;
   esac
 }
 
 language_grammar() {
   case "$1" in
-    unity-assembly-definition) echo unity_json ;;
-    unity-yaml) echo unity_yaml ;;
-    unity-uxml) echo unity_xml ;;
-    unity-uss) echo unity_css ;;
-    unity-shaderlab) echo unity_shaderlab ;;
+    unity-assembly-definition) echo json ;;
+    unity-yaml) echo yaml ;;
+    unity-uxml) echo xml ;;
+    unity-uss) echo css ;;
+    unity-shaderlab) echo shaderlab ;;
     *) return 1 ;;
   esac
 }
@@ -203,7 +204,7 @@ self_test_invalid() {
 stress_yaml() {
   say "Stress-testing large Unity YAML..."
   local dir out i
-  dir="$(ensure_grammar unity_yaml)"
+  dir="$(ensure_grammar yaml)"
   out="$GRAMMARS_DIR/large.meta"
   {
     printf 'fileFormatVersion: 2\n'

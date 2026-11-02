@@ -285,7 +285,66 @@ else:
     if len(errors) == readme_failures:
         ok("README.md covers registry and dev-extension installation")
 
+snippets_manifest = manifest.get("snippets")
+declared_snippets = set()
+if isinstance(snippets_manifest, str):
+    declared_snippets.add(snippets_manifest)
+elif isinstance(snippets_manifest, list):
+    for snippet_path in snippets_manifest:
+        if not isinstance(snippet_path, str):
+            err("snippets entries must be strings")
+        else:
+            declared_snippets.add(snippet_path)
+elif snippets_manifest is not None:
+    err("snippets must be a string or an array of strings")
+
+if declared_snippets:
+    ok(f"{len(declared_snippets)} snippet file(s) registered")
+    for relative_path in sorted(declared_snippets):
+        snippet_path = root / relative_path
+        if not snippet_path.is_file():
+            err(f"registered snippet file does not exist: {relative_path}")
+            continue
+        try:
+            snippet_data = json.loads(snippet_path.read_text())
+        except Exception as exc:  # noqa: BLE001 - report the parser error verbatim
+            err(f"registered snippet file does not parse: {relative_path}: {exc}")
+            continue
+        if not isinstance(snippet_data, dict) or not snippet_data:
+            err(f"registered snippet file must contain a non-empty object: {relative_path}")
+            continue
+        for snippet_name, snippet in snippet_data.items():
+            if not isinstance(snippet, dict):
+                err(f"{relative_path}: snippet '{snippet_name}' must be an object")
+                break
+            body = snippet.get("body")
+            if not isinstance(body, (str, list)) or not body:
+                err(f"{relative_path}: snippet '{snippet_name}' needs a non-empty body")
+                break
+            prefix = snippet.get("prefix")
+            if prefix is not None and not isinstance(prefix, (str, list)):
+                err(f"{relative_path}: snippet '{snippet_name}' prefix must be a string or array")
+                break
+
 tracked = tracked_files()
+tracked_set = set(tracked)
+for relative_path in sorted(declared_snippets):
+    if relative_path not in tracked_set:
+        err(f"registered snippet file is not tracked in git: {relative_path}")
+
+tracked_snippets = {
+    path for path in tracked if path.startswith("snippets/") and path.endswith(".json")
+}
+if tracked_snippets:
+    missing_snippets = sorted(tracked_snippets - declared_snippets)
+    if missing_snippets:
+        err(
+            "snippet files are tracked but not registered in extension.toml: "
+            + ", ".join(missing_snippets)
+        )
+    else:
+        ok("all tracked snippet files are registered")
+
 for path in tracked:
     if path.startswith("csharp-main/"):
         err("csharp-main/ is tracked; remove the Rust reference checkout from the publishable tree")
@@ -299,12 +358,6 @@ for path in tracked:
         err("tests/.grammars/ is a local cache and must not be tracked")
     if path.startswith(".superpowers/"):
         err(".superpowers/ is local review scaffolding and must not be tracked")
-
-if "snippets" not in manifest and any(path.startswith("snippets/") for path in tracked):
-    note(
-        "snippets/ is tracked but extension.toml has no snippets key; "
-        "register it or exclude it before submitting"
-    )
 
 status = git("status", "--porcelain")
 if status.returncode != 0:

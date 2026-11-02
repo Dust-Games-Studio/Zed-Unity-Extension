@@ -7,26 +7,39 @@ license = "MIT"
 description = "Unity file format support: assembly definitions, Unity YAML assets, UI Toolkit UXML/USS, and ShaderLab."
 repository = "https://github.com/Dust-Games-Studio/Zed-Unity-Extension"
 
-# Snippet registration is owned by the separate snippet workstream.
-# Keep the grammar and language declarations below stable for that integration.
+# Zed compiles each grammar with `--export=tree_sitter_<grammar key>`, so the key
+# must match the parser symbol exported by the upstream grammar.
+snippets = [
+    "snippets/animation/csharp.json",
+    "snippets/audio/csharp.json",
+    "snippets/debug/csharp.json",
+    "snippets/editor/csharp.json",
+    "snippets/general/csharp.json",
+    "snippets/input/csharp.json",
+    "snippets/lifecycle/csharp.json",
+    "snippets/networking/csharp.json",
+    "snippets/particles/csharp.json",
+    "snippets/physics/csharp.json",
+    "snippets/rendering/csharp.json",
+]
 
-[grammars.unity_json]
+[grammars.json]
 repository = "https://github.com/tree-sitter/tree-sitter-json"
-commit = "254c42a6476413b776221e03982ac8ae159eeb72"
+rev = "254c42a6476413b776221e03982ac8ae159eeb72"
 
-[grammars.unity_yaml]
+[grammars.yaml]
 repository = "https://github.com/zed-industries/tree-sitter-yaml"
-commit = "baff0b51c64ef6a1fb1f8390f3ad6015b83ec13a"
+rev = "baff0b51c64ef6a1fb1f8390f3ad6015b83ec13a"
 
-[grammars.unity_xml]
+[grammars.xml]
 repository = "https://github.com/tree-sitter-grammars/tree-sitter-xml"
-commit = "5000ae8f22d11fbe93939b05c1e37cf21117162d"
+rev = "5000ae8f22d11fbe93939b05c1e37cf21117162d"
 path = "xml"
 
-[grammars.unity_css]
+[grammars.css]
 repository = "https://github.com/tree-sitter/tree-sitter-css"
-commit = "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f"
+rev = "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f"
 
-[grammars.unity_shaderlab]
+[grammars.shaderlab]
 repository = "https://github.com/msagca/tree-sitter-shaderlab"
-commit = "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5"
+rev = "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5"

@@ -1,5 +1,5 @@
 name = "Unity Assembly Definition"
-grammar = "unity_json"
+grammar = "json"
 path_suffixes = ["asmdef", "asmref"]
 tab_size = 4
 hard_tabs = false

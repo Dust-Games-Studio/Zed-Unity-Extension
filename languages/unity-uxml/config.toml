@@ -1,5 +1,5 @@
 name = "Unity UXML"
-grammar = "unity_xml"
+grammar = "xml"
 path_suffixes = ["uxml"]
 block_comment = ["<!-- ", " -->"]
 autoclose_before = "<"

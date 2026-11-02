@@ -58,9 +58,12 @@ explicitly deferred to a separate agent.
   may point at a subdirectory of its repository with `path`.
 - Extension grammars are compiled to WASM by Zed using `wasi-sdk`. Grammars with C or
   C++ external scanners are supported.
-- Unique grammar names avoid clashes with built-in grammars and other extensions. This
-  design uses `unity_json`, `unity_yaml`, `unity_xml`, `unity_css`, and
-  `unity_shaderlab`.
+- Zed's extension grammar builder links each parser with
+  `--export=tree_sitter_<grammar key>`, so the manifest key must match the parser
+  symbol exported by the upstream grammar. The keys are `json`, `yaml`, `xml`, `css`,
+  and `shaderlab`. The first four are also common native grammar names in Zed; where a
+  native parser is registered, Zed resolves the name to it, while `shaderlab` is loaded
+  from this extension's pin. The queries target stable node names shared by both.
 - Extensions without language servers must not include Rust code, per the publishing
   prerequisites.
 - Zed supports `workspace/willRenameFiles` / `workspace/didRenameFiles` for LSP servers.
@@ -83,8 +86,11 @@ Tree-sitter grammars:
 | Unity USS | `uss`, `tss` | `tree-sitter/tree-sitter-css` | `dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f` | root |
 | Unity ShaderLab | `shader` | `msagca/tree-sitter-shaderlab` | `67e8a4e67b1026889eb41709cea66ec1bcfa6ad5` | root |
 
-All grammars use unique names in `extension.toml` so the extension controls its parser
-versions and does not collide with built-in grammars or the official XML extension.
+Zed's grammar builder requires the manifest key to match the upstream parser symbol
+(`tree_sitter_<key>`). The keys are therefore the upstream names. Where Zed already
+registers a native grammar under the same name, the native parser is used; the extension
+still declares its pinned grammar so the registry requirement is satisfied. The
+`shaderlab` grammar is unique to this extension and is loaded from the pin.
 
 ### 5.1 Coexistence rules
 
@@ -109,7 +115,7 @@ versions and does not collide with built-in grammars or the official XML extensi
 **Configuration**
 
 - `name = "Unity Assembly Definition"`
-- `grammar = "unity_json"`
+- `grammar = "json"`
 - 4-space indentation, no hard tabs.
 - No comment toggle: Unity expects strict JSON.
 - No formatter: Prettier is not guaranteed to preserve Unity's expected shape, and
@@ -154,7 +160,7 @@ they are ordinary YAML documents.
 **Configuration**
 
 - `name = "Unity YAML"`
-- `grammar = "unity_yaml"`
+- `grammar = "yaml"`
 - 2-space indentation.
 - `line_comments = ["# "]`.
 - YAML bracket pairs (`{}`, `[]`, quotes) and YAML indent patterns.
@@ -202,7 +208,7 @@ they are ordinary YAML documents.
 **Configuration**
 
 - `name = "Unity UXML"`
-- `grammar = "unity_xml"`
+- `grammar = "xml"`
 - 4-space indentation.
 - XML block comments.
 - `<`/`>` autoclose behavior.
@@ -257,7 +263,7 @@ properties and variables.
 **Configuration**
 
 - `name = "Unity USS"`
-- `grammar = "unity_css"`
+- `grammar = "css"`
 - 4-space indentation.
 - CSS block comments.
 - CSS-style brackets and autoclose behavior.
@@ -304,7 +310,7 @@ properties and variables.
 **Configuration**
 
 - `name = "Unity ShaderLab"`
-- `grammar = "unity_shaderlab"`
+- `grammar = "shaderlab"`
 - 4-space indentation.
 - `// ` line comments and `/* */` block comments.
 - ShaderLab brackets (`{}`, `[]`, `()`).
@@ -514,27 +520,44 @@ license = "MIT"
 description = "Unity file format support: assembly definitions, Unity YAML assets, UI Toolkit UXML/USS, and ShaderLab."
 repository = "https://github.com/Dust-Games-Studio/Zed-Unity-Extension"
 
-[grammars.unity_json]
+snippets = [
+    "snippets/animation/csharp.json",
+    "snippets/audio/csharp.json",
+    "snippets/debug/csharp.json",
+    "snippets/editor/csharp.json",
+    "snippets/general/csharp.json",
+    "snippets/input/csharp.json",
+    "snippets/lifecycle/csharp.json",
+    "snippets/networking/csharp.json",
+    "snippets/particles/csharp.json",
+    "snippets/physics/csharp.json",
+    "snippets/rendering/csharp.json",
+]
+
+[grammars.json]
 repository = "https://github.com/tree-sitter/tree-sitter-json"
-commit = "254c42a6476413b776221e03982ac8ae159eeb72"
+rev = "254c42a6476413b776221e03982ac8ae159eeb72"
 
-[grammars.unity_yaml]
+[grammars.yaml]
 repository = "https://github.com/zed-industries/tree-sitter-yaml"
-commit = "baff0b51c64ef6a1fb1f8390f3ad6015b83ec13a"
+rev = "baff0b51c64ef6a1fb1f8390f3ad6015b83ec13a"
 
-[grammars.unity_xml]
+[grammars.xml]
 repository = "https://github.com/tree-sitter-grammars/tree-sitter-xml"
-commit = "5000ae8f22d11fbe93939b05c1e37cf21117162d"
+rev = "5000ae8f22d11fbe93939b05c1e37cf21117162d"
 path = "xml"
 
-[grammars.unity_css]
+[grammars.css]
 repository = "https://github.com/tree-sitter/tree-sitter-css"
-commit = "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f"
+rev = "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f"
 
-[grammars.unity_shaderlab]
+[grammars.shaderlab]
 repository = "https://github.com/msagca/tree-sitter-shaderlab"
-commit = "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5"
+rev = "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5"
 ```
+
+The manifest also registers the 11 Unity C# snippet files under `snippets/`. They are
+available in C# buffers and require the official C# extension.
 
 The extension ID `unity` is currently free in the registry; `unity-snippets` and
 `unity-debugger` are separate IDs. The name and ID do not contain `zed` or `extension`.
@@ -568,10 +591,8 @@ requirements, `.meta` safety, limitations, and development/validation instructio
 
 ## 12. Follow-ups
 
-- **Snippets (separate agent):** add `snippets = [...]` to `extension.toml` and files named
-  after the languages (`unity assembly definition.json`, `unity yaml.json`,
-  `unity uxml.json`, `unity uss.json`, `unity shaderlab.json`). Do not ship C# snippets
-  here unless the duplicate-extension rule is revisited.
+- **Additional snippets:** add more Unity snippet files under `snippets/` and register
+  them in `extension.toml`. Snippet files are scoped by filename (`csharp.json` for C#).
 - **`.meta` automation:** a companion Unity Editor package (safe while Unity runs) or an
   LSP that handles `workspace/willRenameFiles` (works while Unity is closed). Both are
   separate projects.

@@ -1,5 +1,11 @@
 # Unity Zed Extension Implementation Plan
 
+> **Implementation note (2026-11-02):** Zed's grammar builder links each parser with
+> `--export=tree_sitter_<grammar key>`, so the final manifest keys are `json`, `yaml`,
+> `xml`, `css`, and `shaderlab` rather than the original `unity_*` names. The 11 Unity
+> C# snippets are now registered in `extension.toml`. See the design spec for the final
+> values.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a declarative Zed extension that gives Unity developers first-class editing support for assembly definitions, Unity YAML assets, UI Toolkit UXML/USS, and ShaderLab, plus a small set of Unity CLI tasks.

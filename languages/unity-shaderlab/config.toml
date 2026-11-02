@@ -1,5 +1,5 @@
 name = "Unity ShaderLab"
-grammar = "unity_shaderlab"
+grammar = "shaderlab"
 path_suffixes = ["shader"]
 line_comments = ["// "]
 block_comment = ["/* ", " */"]

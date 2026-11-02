@@ -1,5 +1,5 @@
 name = "Unity YAML"
-grammar = "unity_yaml"
+grammar = "yaml"
 path_suffixes = [
     "unity", "prefab", "asset", "meta", "mat", "anim", "controller",
     "overrideController", "physicMaterial", "physicsMaterial2D", "renderTexture",
