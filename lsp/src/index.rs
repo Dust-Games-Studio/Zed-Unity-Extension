@@ -83,6 +83,24 @@ pub struct ProjectIndex {
 }
 
 impl ProjectIndex {
+    pub fn new(
+        root: PathBuf,
+        files: Vec<IndexedFile>,
+        dlls: Vec<DllFile>,
+        packages: Vec<PackageInfo>,
+    ) -> Self {
+        let mut project = Self {
+            root,
+            files,
+            dlls,
+            packages,
+            name_index: HashMap::new(),
+            guid_index: HashMap::new(),
+        };
+        project.rebuild_indexes();
+        project
+    }
+
     pub fn rebuild_indexes(&mut self) {
         self.name_index.clear();
         self.guid_index.clear();
