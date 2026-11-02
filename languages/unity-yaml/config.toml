@@ -1,0 +1,21 @@
+name = "Unity YAML"
+grammar = "unity_yaml"
+path_suffixes = [
+    "unity", "prefab", "asset", "meta", "mat", "anim", "controller",
+    "overrideController", "physicMaterial", "physicsMaterial2D", "renderTexture",
+    "cubemap", "flare", "guiskin", "fontsettings", "spriteatlas", "spriteatlasv2",
+    "shadervariants", "lighting", "brush", "terrainlayer", "mask", "preset",
+    "signal", "mixer", "playable",
+]
+line_comments = ["# "]
+tab_size = 2
+autoclose_before = ",]}"
+brackets = [
+    { start = "{", end = "}", close = true, newline = true },
+    { start = "[", end = "]", close = true, newline = true },
+    { start = "\"", end = "\"", close = true, newline = false, not_in = ["string"] },
+    { start = "'", end = "'", close = true, newline = false, not_in = ["string"] },
+]
+auto_indent_on_paste = false
+auto_indent_using_last_non_empty_line = false
+increase_indent_pattern = "(:?^[^#]*:\\s*[|>]?\\s*$)|(:?^\\s*-[^#]*:\\s*(:?#+.*)$)"
