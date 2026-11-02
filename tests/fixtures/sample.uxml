@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="sample.uss" />
+    <ui:VisualElement name="root" class="container">
+        <ui:Label text="Hello" usage-hints="DynamicTransform" />
+        <ui:Button name="play-button" text="Play" class="primary-button" />
+        <ui:ListView name="items" binding-path="m_Items" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,23 @@
+{
+    "name": "MyGame.Runtime",
+    "rootNamespace": "MyGame",
+    "references": [
+        "UnityEngine.UI",
+        "GUID:17b36165d09634a48bf5a0e4bb27f4bd"
+    ],
+    "includePlatforms": ["Android", "WebGL"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_2022_3_OR_NEWER"],
+    "versionDefines": [
+        {
+            "name": "com.unity.test-framework",
+            "expression": "[1.3,2.0]",
+            "define": "MY_TESTS"
+        }
+    ],
+    "noEngineReferences": false
+}

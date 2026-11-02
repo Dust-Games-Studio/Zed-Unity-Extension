@@ -1,0 +1,17 @@
+:root {
+    --unity-primary-color: rgb(255, 100, 0);
+    --unity-font-size: 14px;
+}
+
+.container {
+    flex-grow: 1;
+    padding: 8px;
+    background-color: var(--unity-primary-color);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+#play-button:hover {
+    opacity: 0.85;
+    background-color: rgb(255, 120, 20);
+}

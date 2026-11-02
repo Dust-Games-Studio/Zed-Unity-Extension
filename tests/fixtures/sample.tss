@@ -1,0 +1,9 @@
+@import url("sample.uss");
+
+:root {
+    --unity-accent-color: rgb(0, 120, 255);
+}
+
+.unity-theme-root {
+    background-color: var(--unity-accent-color);
+}
