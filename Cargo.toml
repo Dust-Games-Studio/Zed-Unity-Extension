@@ -12,3 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 sha2 = "0.10"
 zed_extension_api = "0.7.0"
+
+[workspace]
+members = ["lsp"]
+default-members = ["."]

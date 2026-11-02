@@ -1,0 +1,26 @@
+[package]
+name = "unity-asmdef-lsp"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+description = "Language server for Unity assembly definitions."
+repository = "https://github.com/Dust-Games-Studio/Zed-Unity-Extension"
+
+[[bin]]
+name = "unity-asmdef-lsp"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+env_logger = "0.11"
+jsonc-parser = { version = "0.34", default-features = false }
+log = "0.4"
+notify = "8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-std", "sync", "time"] }
+tower-lsp = "0.20"
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"
