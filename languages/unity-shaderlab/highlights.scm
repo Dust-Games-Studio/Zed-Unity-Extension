@@ -35,8 +35,9 @@
   "ENDGLSL"
 ] @keyword
 
-(fallback
-  "Off" @constant.builtin)
+((fallback
+  shader: (string) @constant.builtin)
+  (#eq? @constant.builtin "\"Off\""))
 
 (shader
   name: (string) @label)
@@ -47,7 +48,7 @@
 (use_pass
   (string) @label)
 
-(command_name) @function
+(command_name) @constant.builtin
 
 (stencil_field) @property
 

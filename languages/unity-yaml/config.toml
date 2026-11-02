@@ -18,4 +18,4 @@ brackets = [
 ]
 auto_indent_on_paste = false
 auto_indent_using_last_non_empty_line = false
-increase_indent_pattern = "(:?^[^#]*:\\s*[|>]?\\s*$)|(:?^\\s*-[^#]*:\\s*(:?#+.*)$)"
+increase_indent_pattern = "(?:^[^#]*:\\s*[|>]?\\s*$)|(?:^\\s*-[^#]*:\\s*(?:#+.*)$)"

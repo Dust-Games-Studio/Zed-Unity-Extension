@@ -92,6 +92,7 @@ Requirements:
   the `PATH` that Zed's login shell sees.
 - `Unity: Recompile scripts` and `Unity: Editor status` require a running Editor with the
   Pipeline package (`unity pipeline install`).
+- `Unity: Check .meta pairing` requires a Git or Unity Version Control workspace.
 - Test tasks use Unity's batch test runner and do not require a running Editor.
 
 The tasks assume the Unity project is the Zed worktree root. If the project is nested in a
@@ -109,7 +110,8 @@ Safe workflows:
 1. Rename or move assets in Unity's Project window, not in Zed.
 2. If you must rename in Zed, move the matching `.meta` file at the same time, keeping the
    same basename.
-3. Detect pairing problems with `unity vcs status` or `unity vcs doctor`.
+3. Detect pairing problems with `unity vcs status`; use `unity vcs doctor` to check
+   repository, ignore-rule, and LFS health.
 
 This extension cannot automate `.meta` moves. Zed extensions cannot rename, move, or watch
 files. A companion Unity Editor package or a language server using
@@ -138,8 +140,9 @@ highlighting; ShaderLab structure still highlights without it.
 
 ## Binary assets
 
-Only text-serialized Unity assets are supported. If a `.unity`, `.prefab`, or `.asset`
-file uses Unity's binary serialization, it will show parse errors. Set
+Only text-serialized Unity assets are supported. Binary-serialized files are not
+supported and may show parse errors or render as an empty tree, depending on the header
+bytes. If a `.unity`, `.prefab`, or `.asset` file uses Unity's binary serialization, set
 **Edit > Project Settings > Editor > Asset Serialization > Mode** to **Force Text** (the
 recommended setting for version control) and let Unity reserialize the project.
 
@@ -193,7 +196,7 @@ Manual Zed check:
 
 ## Future work
 
-- C# snippets are handled by a separate snippet workstream.
+- Snippets are not included in this extension yet.
 - `.meta` automation requires a Unity Editor package or a language server using
   `workspace/willRenameFiles`; it is not part of this extension.
 - `.shadergraph`, `.shadersubgraph`, and `.inputactions` support are candidate future

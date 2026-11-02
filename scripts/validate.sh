@@ -44,10 +44,13 @@ grammar_subdir() {
 }
 
 ensure_generated() {
-  local name="$1" dir="$2" stamp="$GRAMMARS_DIR/.generated/$name"
+  local name="$1" dir="$2" stamp="$GRAMMARS_DIR/.generated/$name" out
   if [ ! -f "$stamp" ]; then
     progress "Generating $name parser..."
-    ( cd "$dir" && "$TS_BIN" generate >/dev/null 2>&1 ) || fail "tree-sitter generate failed for $name"
+    if ! out="$( cd "$dir" && "$TS_BIN" generate 2>&1 )"; then
+      printf '%s\n' "$out" >&2
+      fail "tree-sitter generate failed for $name"
+    fi
     mkdir -p "$(dirname "$stamp")"
     touch "$stamp"
   fi
@@ -166,11 +169,14 @@ validate_json() {
 
 parse_fixtures() {
   say "Parsing fixtures..."
-  local fixture grammar dir count=0
+  local fixture grammar dir count=0 out
   while IFS= read -r fixture; do
     grammar="$(fixture_grammar "$fixture")" || fail "No grammar mapping for $fixture"
     dir="$(ensure_grammar "$grammar")"
-    ( cd "$dir" && "$TS_BIN" parse --quiet "$fixture" >/dev/null 2>&1 ) || fail "Parse failed: $fixture ($grammar)"
+    if ! out="$( cd "$dir" && "$TS_BIN" parse --quiet "$fixture" 2>&1 )"; then
+      printf '%s\n' "$out" >&2
+      fail "Parse failed: $fixture ($grammar)"
+    fi
     count=$((count + 1))
     say "  ok  $fixture"
   done < <(find "$ROOT/tests/fixtures" -maxdepth 1 -type f | sort)
@@ -179,12 +185,13 @@ parse_fixtures() {
 
 self_test_invalid() {
   say "Checking that malformed fixtures fail to parse..."
-  local fixture grammar dir count=0
+  local fixture grammar dir count=0 out
   for fixture in "$ROOT"/tests/fixtures/invalid/*; do
     [ -e "$fixture" ] || continue
     grammar="$(fixture_grammar "$fixture")" || fail "No grammar mapping for $fixture"
     dir="$(ensure_grammar "$grammar")"
-    if ( cd "$dir" && "$TS_BIN" parse --quiet "$fixture" >/dev/null 2>&1 ); then
+    if out="$( cd "$dir" && "$TS_BIN" parse --quiet "$fixture" 2>&1 )"; then
+      printf '%s\n' "$out" >&2
       fail "Expected parse failure but succeeded: $fixture"
     fi
     count=$((count + 1))
@@ -207,33 +214,37 @@ stress_yaml() {
       i=$((i + 1))
     done
   } > "$out"
-  ( cd "$dir" && "$TS_BIN" parse --quiet "$out" >/dev/null 2>&1 ) || fail "Large YAML parse failed"
+  ( cd "$dir" && "$TS_BIN" parse --quiet "$out" >/dev/null 2>&1 ) || { rm -f "$out"; fail "Large YAML parse failed"; }
   say "  ok  large YAML ($(wc -c < "$out") bytes)"
   rm -f "$out"
 }
 
 validate_queries() {
   say "Validating language configs and queries..."
-  local lang_dir lang grammar fixture query dir
+  local lang_dir lang grammar fixture query dir count=0 out
   for lang_dir in "$ROOT"/languages/*; do
     [ -d "$lang_dir" ] || continue
     lang="$(basename "$lang_dir")"
     grammar="$(language_grammar "$lang")" || fail "No grammar mapping for language $lang"
     dir="$(ensure_grammar "$grammar")"
     [ -f "$lang_dir/config.toml" ] || fail "Missing config.toml in $lang_dir"
+    [ -f "$lang_dir/tasks.json" ] || fail "Missing tasks.json in $lang_dir"
     validate_toml "$lang_dir/config.toml" || fail "Invalid TOML: $lang_dir/config.toml"
-    if [ -f "$lang_dir/tasks.json" ]; then
-      validate_json "$lang_dir/tasks.json" || fail "Invalid JSON: $lang_dir/tasks.json"
-    fi
+    validate_json "$lang_dir/tasks.json" || fail "Invalid JSON: $lang_dir/tasks.json"
     while IFS= read -r fixture; do
       [ -n "$fixture" ] || continue
       for query in "$lang_dir"/*.scm; do
         [ -e "$query" ] || continue
-        ( cd "$dir" && "$TS_BIN" query "$query" "$fixture" >/dev/null 2>&1 ) || fail "Query failed: $query against $fixture"
+        if ! out="$( cd "$dir" && "$TS_BIN" query "$query" "$fixture" 2>&1 )"; then
+          printf '%s\n' "$out" >&2
+          fail "Query failed: $query against $fixture"
+        fi
       done
     done < <(language_fixtures "$lang")
+    count=$((count + 1))
     say "  ok  $lang"
   done
+  [ "$count" -gt 0 ] || fail "No language directories validated under $ROOT/languages"
 }
 
 case "$MODE" in
@@ -255,7 +266,7 @@ case "$MODE" in
     say "All checks passed."
     ;;
   *)
-    echo "Usage: $0 [--fixtures-only|--self-test|--stress|--all]" >&2
+    echo "Usage: $0 [--fixtures-only|--self-test|--stress|all|--all]" >&2
     exit 2
     ;;
 esac

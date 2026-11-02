@@ -9,6 +9,12 @@ Shader "Custom/UnlitColor"
     SubShader
     {
         Tags { "RenderType"="Opaque" "Queue"="Geometry" }
+        Stencil
+        {
+            Ref 1
+            Comp Always
+            Pass Replace
+        }
         LOD 100
         Cull Off
         ZWrite On

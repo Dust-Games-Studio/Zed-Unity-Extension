@@ -5,6 +5,7 @@
 
 .container {
     flex-grow: 1;
+    margin: 4px;
     padding: 8px;
     background-color: var(--unity-primary-color);
     -unity-font-style: bold;
