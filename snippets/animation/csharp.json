@@ -1,0 +1,78 @@
+{
+  "Unity StateMachineBehaviour": {
+    "prefix": "StateMachineBehaviour",
+    "description": "Unity StateMachineBehaviour class template.",
+    "body": [
+      "using UnityEngine;",
+      "",
+      "public class $1 : StateMachineBehaviour {",
+      "\tpublic override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnAnimatorIK": {
+    "prefix": "OnAnimatorIK",
+    "description": "Callback for setting up animation IK (inverse kinematics).",
+    "body": [
+      "private void OnAnimatorIK(int layerIndex) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnAnimatorMove": {
+    "prefix": "OnAnimatorMove",
+    "description": "Callback for processing animation movements for modifying root motion.",
+    "body": [
+      "private void OnAnimatorMove() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "StateMachineBehaviour OnStateEnter": {
+    "prefix": "OnStateEnter",
+    "description": "OnStateEnter is called when a transition starts and the state machine starts to evaluate this state.",
+    "body": [
+      "public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "StateMachineBehaviour OnStateExit": {
+    "prefix": "OnStateExit",
+    "description": "OnStateExit is called when a transition ends and the state machine finishes evaluating this state.",
+    "body": [
+      "public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "StateMachineBehaviour OnStateIK": {
+    "prefix": "OnStateIK",
+    "description": "OnStateIK is called right after Animator.OnAnimatorIK().",
+    "body": [
+      "public override void OnStateIK(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "StateMachineBehaviour OnStateMove": {
+    "prefix": "OnStateMove",
+    "description": "OnStateMove is called right after Animator.OnAnimatorMove().",
+    "body": [
+      "public override void OnStateMove(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "StateMachineBehaviour OnStateUpdate": {
+    "prefix": "OnStateUpdate",
+    "description": "OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks.",
+    "body": [
+      "public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

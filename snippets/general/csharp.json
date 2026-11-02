@@ -1,0 +1,57 @@
+{
+  "Unity MonoBehaviour": {
+    "prefix": "MonoBehaviour",
+    "description": "Unity MonoBehaviour class template.",
+    "body": [
+      "using UnityEngine;",
+      "",
+      "public class $1 : MonoBehaviour {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "Unity ScriptableObject": {
+    "prefix": "ScriptableObject",
+    "description": "Unity ScriptableObject class template.",
+    "body": [
+      "using UnityEngine;",
+      "",
+      "[CreateAssetMenu(fileName = \"$1\", menuName = \"$2\", order = $3)]",
+      "public class $1 : ScriptableObject {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "General class": {
+    "prefix": "class",
+    "description": "Creates a standard class.",
+    "body": [
+      "public class $1 {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "General interface": {
+    "prefix": "interface",
+    "description": "Creates a standard interface.",
+    "body": [
+      "public interface $1 {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "Attribute: SerializeField": {
+    "prefix": "SerializeField",
+    "body": [
+      "[SerializeField] private $1 $2;"
+    ],
+    "description": "Force Unity to serialize a private field."
+  },
+  "MonoBehaviour RequireComponent": {
+    "prefix": "RequireComponent",
+    "body": [
+      "[RequireComponent(typeof($1))]"
+    ],
+    "description": "Automatically adds required components as dependencies."
+  }
+}

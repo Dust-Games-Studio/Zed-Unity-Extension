@@ -1,0 +1,104 @@
+{
+  "Unity NetworkBehaviour": {
+    "prefix": "NetworkBehaviour",
+    "description": "Unity NetworkBehaviour class template.",
+    "body": [
+      "using UnityEngine;",
+      "using UnityEngine.Networking;",
+      "",
+      "public class $1 : NetworkBehaviour {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnConnectedToServer": {
+    "prefix": "OnConnectedToServer",
+    "description": "Called on the client when you have successfully connected to a server.",
+    "body": [
+      "private void OnConnectedToServer() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnDisconnectedFromServer": {
+    "prefix": "OnDisconnectedFromServer",
+    "description": "Called on the client when the connection was lost or you disconnected from the server.",
+    "body": [
+      "private void OnDisconnectedFromServer(NetworkDisconnection info) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnFailedToConnect": {
+    "prefix": "OnFailedToConnect",
+    "description": "Called on the client when a connection attempt fails for some reason.",
+    "body": [
+      "private void OnFailedToConnect(NetworkConnectionError error) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnFailedToConnectToMasterServer": {
+    "prefix": "OnFailedToConnectToMasterServer",
+    "description": "Called on clients or servers when there is a problem connecting to the MasterServer.",
+    "body": [
+      "private void OnFailedToConnectToMasterServer(NetworkConnectionError error) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMasterServerEvent": {
+    "prefix": "OnMasterServerEvent",
+    "description": "Called on clients or servers when reporting events from the MasterServer.",
+    "body": [
+      "private void OnMasterServerEvent(MasterServerEvent msEvent) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnNetworkInstantiate": {
+    "prefix": "OnNetworkInstantiate",
+    "description": "Called on objects which have been network instantiated with Network.Instantiate.",
+    "body": [
+      "private void OnNetworkInstantiate(NetworkMessageInfo info) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnPlayerConnected": {
+    "prefix": "OnPlayerConnected",
+    "description": "Called on the server whenever a new player has successfully connected.",
+    "body": [
+      "private void OnPlayerConnected(NetworkPlayer player) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnPlayerDisconnected": {
+    "prefix": "OnPlayerDisconnected",
+    "description": "Called on the server whenever a player disconnected from the server.",
+    "body": [
+      "private void OnPlayerDisconnected(NetworkPlayer player) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnSerializeNetworkView": {
+    "prefix": "OnSerializeNetworkView",
+    "description": "Used to customize synchronization of variables in a script watched by a network view.",
+    "body": [
+      "private void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnServerInitialized": {
+    "prefix": "OnServerInitialized",
+    "description": "Called on the server whenever a Network.InitializeServer was invoked and has completed.",
+    "body": [
+      "private void OnServerInitialized() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

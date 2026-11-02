@@ -1,0 +1,83 @@
+{
+  "MonoBehaviour OnBecameInvisible": {
+    "prefix": "OnBecameInvisible",
+    "description": "OnBecameInvisible is called when the renderer is no longer visible by any camera.",
+    "body": [
+      "private void OnBecameInvisible() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnBecameVisible": {
+    "prefix": "OnBecameVisible",
+    "description": "OnBecameVisible is called when the renderer became visible by any camera.",
+    "body": [
+      "private void OnBecameVisible() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnPostRender": {
+    "prefix": "OnPostRender",
+    "description": "OnPostRender is called after a camera finishes rendering the scene.",
+    "body": [
+      "private void OnPostRender() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnPreCull": {
+    "prefix": "OnPreCull",
+    "description": "OnPreCull is called before a camera culls the scene.",
+    "body": [
+      "private void OnPreCull() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnPreRender": {
+    "prefix": "OnPreRender",
+    "description": "OnPreRender is called before a camera starts rendering the scene.",
+    "body": [
+      "private void OnPreRender() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnRenderImage": {
+    "prefix": "OnRenderImage",
+    "description": "OnRenderImage is called after all rendering is complete to render image.",
+    "body": [
+      "private void OnRenderImage(RenderTexture src, RenderTexture dest) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnRenderObject": {
+    "prefix": "OnRenderObject",
+    "description": "OnRenderObject is called after camera has rendered the scene.",
+    "body": [
+      "private void OnRenderObject() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnWillRenderObject": {
+    "prefix": "OnWillRenderObject",
+    "description": "OnWillRenderObject is called for each camera if the object is visible and not a UI element.",
+    "body": [
+      "private void OnWillRenderObject() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnGUI": {
+    "prefix": "OnGUI",
+    "description": "OnGUI is called for rendering and handling GUI events.",
+    "body": [
+      "private void OnGUI() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

@@ -1,0 +1,203 @@
+{
+  "Unity Editor": {
+    "prefix": "Editor",
+    "description": "Unity Editor class template.",
+    "body": [
+      "using UnityEngine;",
+      "using UnityEditor;",
+      "",
+      "[CustomEditor(typeof($1))]",
+      "public class $2 : Editor {",
+      "\tpublic override void OnInspectorGUI() {",
+      "\t\tbase.OnInspectorGUI();",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ]
+  },
+  "Unity Editor with Reorderable List": {
+    "prefix": "EditorWithReorderableList",
+    "description": "Unity Editor class template with a ReorderableList.",
+    "body": [
+      "using UnityEngine;",
+      "using UnityEditor;",
+      "using UnityEditorInternal;",
+      "",
+      "[CustomEditor(typeof($1))]",
+      "public class $2 : Editor {",
+      "\tprivate SerializedProperty _property;",
+      "\tprivate ReorderableList _list;",
+      "",
+      "\tprivate void OnEnable() {",
+      "\t\t_property = serializedObject.FindProperty(\"$3\");",
+      "\t\t_list = new ReorderableList(serializedObject, _property, true, true, true, true) {",
+      "\t\t\tdrawHeaderCallback = DrawListHeader,",
+      "\t\t\tdrawElementCallback = DrawListElement",
+      "\t\t};",
+      "\t}",
+      "",
+      "\tprivate void DrawListHeader(Rect rect) {",
+      "\t\tGUI.Label(rect, \"$3\");",
+      "\t}",
+      "",
+      "\tprivate void DrawListElement(Rect rect, int index, bool isActive, bool isFocused) {",
+      "\t\tvar item = _property.GetArrayElementAtIndex(index);",
+      "\t\tEditorGUI.PropertyField(rect, item);",
+      "\t\t$0",
+      "\t}",
+      "",
+      "\tpublic override void OnInspectorGUI() {",
+      "\t\tserializedObject.Update();",
+      "\t\tEditorGUILayout.Space();",
+      "\t\t_list.DoLayoutList();",
+      "\t\tserializedObject.ApplyModifiedProperties();",
+      "\t}",
+      "}"
+    ]
+  },
+  "Unity EditorWindow": {
+    "prefix": "EditorWindow",
+    "description": "Unity EditorWindow class template.",
+    "body": [
+      "using UnityEngine;",
+      "using UnityEditor;",
+      "",
+      "public class $1 : EditorWindow {",
+      "\t[MenuItem(\"$2/$3\")]",
+      "\tprivate static void ShowWindow() {",
+      "\t\tvar window = GetWindow<$1>();",
+      "\t\twindow.titleContent = new GUIContent(\"$3\");",
+      "\t\twindow.Show();",
+      "\t}",
+      "",
+      "\tprivate void OnGUI() {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ]
+  },
+  "Unity PropertyDrawer": {
+    "prefix": "PropertyDrawer",
+    "description": "Unity PropertyDrawer class template.",
+    "body": [
+      "using UnityEngine;",
+      "using UnityEditor;",
+      "",
+      "[CustomPropertyDrawer(typeof($1))]",
+      "public class $2 : PropertyDrawer {",
+      "\tpublic override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ]
+  },
+  "Unity ScriptableWizard": {
+    "prefix": "ScriptableWizard",
+    "description": "Unity ScriptableWizard class template.",
+    "body": [
+      "using UnityEngine;",
+      "using UnityEditor;",
+      "",
+      "public class $1 : ScriptableWizard {",
+      "\t[MenuItem(\"$2/$3\")]",
+      "\tprivate static void MenuEntryCall() {",
+      "\t\tDisplayWizard<$1>(\"$4\");",
+      "\t}",
+      "",
+      "\tprivate void OnWizardCreate() {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ]
+  },
+  "Editor OnSceneGUI": {
+    "prefix": "OnSceneGUI",
+    "description": "Enables the Editor to handle an event in the scene view.",
+    "body": [
+      "public void OnSceneGUI() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "EditorWindow OnFocus": {
+    "prefix": "OnFocus",
+    "description": "Called when the window gets keyboard focus.",
+    "body": [
+      "private void OnFocus() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "EditorWindow OnHierarchyChange": {
+    "prefix": "OnHierarchyChange",
+    "description": "Handler for message that is sent when an object or group of objects in the hierarchy changes.",
+    "body": [
+      "private void OnHierarchyChange() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "EditorWindow OnInspectorUpdate": {
+    "prefix": "OnInspectorUpdate",
+    "description": "OnInspectorUpdate is called at 10 frames per second to give the inspector a chance to update.",
+    "body": [
+      "private void OnInspectorUpdate() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "EditorWindow OnLostFocus": {
+    "prefix": "OnLostFocus",
+    "description": "Called when the window loses keyboard focus.",
+    "body": [
+      "private void OnLostFocus() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "EditorWindow OnProjectChange": {
+    "prefix": "OnProjectChange",
+    "description": "Handler for message that is sent whenever the state of the project changes.",
+    "body": [
+      "private void OnProjectChange() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "EditorWindow OnSelectionChange": {
+    "prefix": "OnSelectionChange",
+    "description": "Called whenever the selection has changed.",
+    "body": [
+      "private void OnSelectionChange() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "ScriptableWizard OnWizardCreate": {
+    "prefix": "OnWizardCreate",
+    "description": "This is called when the user clicks the Create button.",
+    "body": [
+      "private void OnWizardCreate() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "ScriptableWizard OnWizardOtherButton": {
+    "prefix": "OnWizardOtherButton",
+    "description": "Allows you to provide an action for the secondary button in the wizard. The button is shown when this function is overridden.",
+    "body": [
+      "private void OnWizardOtherButton() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "ScriptableWizard OnWizardUpdate": {
+    "prefix": "OnWizardUpdate",
+    "description": "This is called when the wizard is opened or whenever the user changes something in the wizard.",
+    "body": [
+      "private void OnWizardUpdate() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

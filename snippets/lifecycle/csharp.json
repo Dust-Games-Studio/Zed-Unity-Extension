@@ -1,0 +1,137 @@
+{
+  "MonoBehaviour Awake": {
+    "prefix": "Awake",
+    "description": "Awake is called when the script instance is being loaded.",
+    "body": [
+      "private void Awake() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour FixedUpdate": {
+    "prefix": "FixedUpdate",
+    "description": "This function is called every fixed framerate frame, if the MonoBehaviour is enabled.",
+    "body": [
+      "private void FixedUpdate() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour LateUpdate": {
+    "prefix": "LateUpdate",
+    "description": "LateUpdate is called every frame, if the Behaviour is enabled. It is called after all Update functions have been called.",
+    "body": [
+      "private void LateUpdate() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnApplicationFocus": {
+    "prefix": "OnApplicationFocus",
+    "description": "Callback sent to all game objects when the player gets or loses focus.",
+    "body": [
+      "private void OnApplicationFocus(bool focusStatus) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnApplicationPause": {
+    "prefix": "OnApplicationPause",
+    "description": "Callback sent to all game objects when the player pauses.",
+    "body": [
+      "private void OnApplicationPause(bool pauseStatus) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnApplicationQuit": {
+    "prefix": "OnApplicationQuit",
+    "description": "Callback sent to all game objects before the application is quit.",
+    "body": [
+      "private void OnApplicationQuit() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnDestroy": {
+    "prefix": "OnDestroy",
+    "description": "This function is called when the MonoBehaviour will be destroyed.",
+    "body": [
+      "private void OnDestroy() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnDisable": {
+    "prefix": "OnDisable",
+    "description": "This function is called when the behaviour becomes disabled or inactive.",
+    "body": [
+      "private void OnDisable() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnEnable": {
+    "prefix": "OnEnable",
+    "description": "This function is called when the object becomes enabled and active.",
+    "body": [
+      "private void OnEnable() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnValidate": {
+    "prefix": "OnValidate",
+    "description": "Called when the script is loaded or a value is changed in the inspector (Called in the editor only).",
+    "body": [
+      "private void OnValidate() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour Reset": {
+    "prefix": "Reset",
+    "description": "Reset is called when the user hits the Reset button in the Inspector's context menu or when adding the component the first time.",
+    "body": [
+      "private void Reset() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour Start": {
+    "prefix": "Start",
+    "description": "Start is called on the frame when a script is enabled just before any of the Update methods is called the first time.",
+    "body": [
+      "private void Start() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour Update": {
+    "prefix": "Update",
+    "description": "Update is called every frame, if the MonoBehaviour is enabled.",
+    "body": [
+      "private void Update() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnTransformChildrenChanged": {
+    "prefix": "OnTransformChildrenChanged",
+    "description": "Called when the list of children of the transform of the GameObject has changed.",
+    "body": [
+      "private void OnTransformChildrenChanged() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnTransformParentChanged": {
+    "prefix": "OnTransformParentChanged",
+    "description": "Called when the parent property of the transform of the GameObject has changed.",
+    "body": [
+      "private void OnTransformParentChanged() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

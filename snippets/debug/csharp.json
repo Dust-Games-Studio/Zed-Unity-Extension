@@ -1,0 +1,83 @@
+{
+  "Debug Log": {
+    "prefix": "Debug.Log",
+    "description": "Logs message to the Unity Console.",
+    "body": [
+      "Debug.Log($1);"
+    ]
+  },
+  "Debug Log Error": {
+    "prefix": "Debug.LogError",
+    "description": "A variant of Debug.Log that logs an error message to the console.",
+    "body": [
+      "Debug.LogError($1);"
+    ]
+  },
+  "Debug Log Warning": {
+    "prefix": "Debug.LogWarning",
+    "description": "A variant of Debug.Log that logs a warning message to the console.",
+    "body": [
+      "Debug.LogWarning($1);"
+    ]
+  },
+  "Debug Log Exception": {
+    "prefix": "Debug.LogException",
+    "description": "A variant of Debug.Log that logs an error message from an exception to the console.",
+    "body": [
+      "Debug.LogException($1);"
+    ]
+  },
+  "Debug LogFormat": {
+    "prefix": "Debug.LogFormat",
+    "description": "Logs a formatted message to the Unity Console.",
+    "body": [
+      "Debug.LogFormat($1, $2);"
+    ]
+  },
+  "Debug LogErrorFormat": {
+    "prefix": "Debug.LogErrorFormat",
+    "description": "Logs a formatted error message to the Unity console.",
+    "body": [
+      "Debug.LogErrorFormat($1, $2);"
+    ]
+  },
+  "Debug LogWarningFormat": {
+    "prefix": "Debug.LogWarningFormat",
+    "description": "Logs a formatted warning message to the Unity Console.",
+    "body": [
+      "Debug.LogWarningFormat($1, $2);"
+    ]
+  },
+  "Debug DrawLine": {
+    "prefix": "Debug.DrawLine",
+    "description": "Draws a line between specified start and end points.",
+    "body": [
+      "Debug.DrawLine($1, $2, Color.white, 0.0f, true);"
+    ]
+  },
+  "Debug DrawRay": {
+    "prefix": "Debug.DrawRay",
+    "description": "Draws a line from start to start + dir in world coordinates.",
+    "body": [
+      "Debug.DrawRay($1, $2, Color.white, 0.0f, true);"
+    ]
+  },
+  "MonoBehaviour OnDrawGizmos": {
+    "prefix": "OnDrawGizmos",
+    "description": "Callback to draw gizmos that are pickable and always drawn.",
+    "body": [
+      "private void OnDrawGizmos() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnDrawGizmosSelected": {
+    "prefix": "OnDrawGizmosSelected",
+    "description": "Callback to draw gizmos only if the object is selected.",
+    "body": [
+      "private void OnDrawGizmosSelected() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}
