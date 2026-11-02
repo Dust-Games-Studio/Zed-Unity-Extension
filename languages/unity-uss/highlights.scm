@@ -1,4 +1,5 @@
 (comment) @comment
+(ERROR) @error
 
 [
   (tag_name)
