@@ -1,0 +1,29 @@
+{
+  "MonoBehaviour OnParticleCollision": {
+    "prefix": "OnParticleCollision",
+    "description": "OnParticleCollision is called when a particle hits a collider.",
+    "body": [
+      "private void OnParticleCollision(GameObject other) {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnParticleSystemStopped": {
+    "prefix": "OnParticleSystemStopped",
+    "description": "OnParticleSystemStopped is called when all particles in the system have died, and no new particles will be born. New particles cease to be created either after Stop is called, or when the duration property of a non-looping system has been exceeded.",
+    "body": [
+      "private void OnParticleSystemStopped() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnParticleTrigger": {
+    "prefix": "OnParticleTrigger",
+    "description": "OnParticleTrigger is called when any particles in a particle system meet the conditions in the trigger module.",
+    "body": [
+      "private void OnParticleTrigger() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

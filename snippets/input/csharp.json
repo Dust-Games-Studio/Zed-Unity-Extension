@@ -1,0 +1,65 @@
+{
+  "MonoBehaviour OnMouseDown": {
+    "prefix": "OnMouseDown",
+    "description": "OnMouseDown is called when the user has pressed the mouse button while over the GUIElement or Collider.",
+    "body": [
+      "private void OnMouseDown() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMouseDrag": {
+    "prefix": "OnMouseDrag",
+    "description": "OnMouseDrag is called when the user has clicked on a GUIElement or Collider and is still holding down the mouse.",
+    "body": [
+      "private void OnMouseDrag() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMouseEnter": {
+    "prefix": "OnMouseEnter",
+    "description": "Called when the mouse enters the GUIElement or Collider.",
+    "body": [
+      "private void OnMouseEnter() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMouseExit": {
+    "prefix": "OnMouseExit",
+    "description": "Called when the mouse is not any longer over the GUIElement or Collider.",
+    "body": [
+      "private void OnMouseExit() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMouseOver": {
+    "prefix": "OnMouseOver",
+    "description": "Called every frame while the mouse is over the GUIElement or Collider.",
+    "body": [
+      "private void OnMouseOver() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMouseUp": {
+    "prefix": "OnMouseUp",
+    "description": "OnMouseUp is called when the user has released the mouse button.",
+    "body": [
+      "private void OnMouseUp() {",
+      "\t$0",
+      "}"
+    ]
+  },
+  "MonoBehaviour OnMouseUpAsButton": {
+    "prefix": "OnMouseUpAsButton",
+    "description": "OnMouseUpAsButton is only called when the mouse is released over the same GUIElement or Collider as it was pressed.",
+    "body": [
+      "private void OnMouseUpAsButton() {",
+      "\t$0",
+      "}"
+    ]
+  }
+}

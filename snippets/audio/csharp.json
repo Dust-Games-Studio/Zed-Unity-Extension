@@ -1,0 +1,11 @@
+{
+  "MonoBehaviour OnAudioFilterRead": {
+    "prefix": "OnAudioFilterRead",
+    "description": "If OnAudioFilterRead is implemented, Unity will insert a custom filter into the audio DSP chain.",
+    "body": [
+      "private void OnAudioFilterRead(float[] data, int channels) {",
+      "\t$0",
+      "}"
+    ]
+  }
+}
