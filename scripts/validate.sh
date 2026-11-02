@@ -54,17 +54,45 @@ ensure_generated() {
 }
 
 ensure_grammar() {
-  local name="$1" repo commit dir sub
+  local name="$1" repo commit dir sub head
   repo="$(grammar_repo "$name")"
   commit="$(grammar_commit "$name")"
   dir="$GRAMMARS_DIR/$name"
+  # A directory without .git is a leftover from an interrupted clone; it must
+  # never be trusted as a cache.
+  if [ -d "$dir" ] && [ ! -d "$dir/.git" ]; then
+    progress "Removing incomplete grammar cache for $name..."
+    rm -rf "$dir"
+    rm -f "$GRAMMARS_DIR/.generated/$name"
+  fi
   if [ ! -d "$dir/.git" ]; then
     progress "Cloning $name..."
     mkdir -p "$GRAMMARS_DIR"
-    git init -q "$dir"
-    git -C "$dir" remote add origin "$repo"
-    git -C "$dir" fetch -q --depth 1 origin "$commit"
-    git -C "$dir" checkout -q FETCH_HEAD
+    rm -rf "$dir"
+    if ! git init -q "$dir" \
+      || ! git -C "$dir" remote add origin "$repo" \
+      || ! git -C "$dir" fetch -q --depth 1 origin "$commit" \
+      || ! git -C "$dir" checkout -q FETCH_HEAD; then
+      rm -rf "$dir"
+      fail "Failed to clone $name from $repo at $commit. Check network access and the pinned commit."
+    fi
+  fi
+  head="$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)"
+  if [ "$head" != "$commit" ]; then
+    progress "Resetting $name to pinned commit $commit (found ${head:-no HEAD})..."
+    if ! git -C "$dir" remote set-url origin "$repo" 2>/dev/null \
+      || ! git -C "$dir" fetch -q --depth 1 origin "$commit" \
+      || ! git -C "$dir" checkout -q --force FETCH_HEAD; then
+      rm -rf "$dir"
+      fail "Failed to reset $name to pinned commit $commit. Remove $dir and retry."
+    fi
+    head="$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)"
+    if [ "$head" != "$commit" ]; then
+      rm -rf "$dir"
+      fail "$name is at ${head:-no HEAD}, expected pinned commit $commit. Remove $dir and retry."
+    fi
+    # The parser must be regenerated for the newly checked-out sources.
+    rm -f "$GRAMMARS_DIR/.generated/$name"
   fi
   sub="$(grammar_subdir "$name")"
   if [ -n "$sub" ]; then
@@ -138,18 +166,20 @@ validate_json() {
 
 parse_fixtures() {
   say "Parsing fixtures..."
-  local fixture grammar dir
+  local fixture grammar dir count=0
   while IFS= read -r fixture; do
     grammar="$(fixture_grammar "$fixture")" || fail "No grammar mapping for $fixture"
     dir="$(ensure_grammar "$grammar")"
     ( cd "$dir" && "$TS_BIN" parse --quiet "$fixture" >/dev/null 2>&1 ) || fail "Parse failed: $fixture ($grammar)"
+    count=$((count + 1))
     say "  ok  $fixture"
   done < <(find "$ROOT/tests/fixtures" -maxdepth 1 -type f | sort)
+  [ "$count" -gt 0 ] || fail "No valid fixtures found under $ROOT/tests/fixtures"
 }
 
 self_test_invalid() {
   say "Checking that malformed fixtures fail to parse..."
-  local fixture grammar dir
+  local fixture grammar dir count=0
   for fixture in "$ROOT"/tests/fixtures/invalid/*; do
     [ -e "$fixture" ] || continue
     grammar="$(fixture_grammar "$fixture")" || fail "No grammar mapping for $fixture"
@@ -157,8 +187,10 @@ self_test_invalid() {
     if ( cd "$dir" && "$TS_BIN" parse --quiet "$fixture" >/dev/null 2>&1 ); then
       fail "Expected parse failure but succeeded: $fixture"
     fi
+    count=$((count + 1))
     say "  ok (fails as expected) $fixture"
   done
+  [ "$count" -gt 0 ] || fail "No invalid fixtures found under $ROOT/tests/fixtures/invalid"
 }
 
 stress_yaml() {
