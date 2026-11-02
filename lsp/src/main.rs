@@ -1,4 +1,5 @@
 mod context;
+mod index;
 mod parse;
 mod paths;
 mod platforms;
