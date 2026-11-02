@@ -1,5 +1,6 @@
 mod completion;
 mod context;
+mod diagnostics;
 mod index;
 mod parse;
 mod paths;
