@@ -1,7 +1,12 @@
 id = "unity"
 name = "Unity"
-version = "0.1.0"
+version = "0.2.0"
 schema_version = 1
+capabilities = []
+
+[lib]
+kind = "Rust"
+version = "0.7.0"
 authors = ["Dust Games Studio"]
 license = "MIT"
 description = "Unity file format support: assembly definitions, Unity YAML assets, UI Toolkit UXML/USS, and ShaderLab."
@@ -43,3 +48,8 @@ rev = "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f"
 [grammars.shaderlab]
 repository = "https://github.com/msagca/tree-sitter-shaderlab"
 rev = "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5"
+
+[language_servers.unity-asmdef]
+name = "Unity Assembly Definition LSP"
+languages = ["Unity Assembly Definition"]
+language_ids = { "Unity Assembly Definition" = "json" }

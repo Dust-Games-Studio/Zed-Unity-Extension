@@ -4,8 +4,9 @@
 # Grammar cache created by scripts/validate.sh
 /tests/.grammars/
 
-# Rust/tooling leftovers (the extension itself has no Rust code)
+# Rust/tooling leftovers
 /target/
+/lsp/target/
 /grammars/
 *.wasm
 

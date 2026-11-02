@@ -1,0 +1,14 @@
+[package]
+name = "unity"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+description = "Unity language support for Zed, including the assembly definition language server."
+repository = "https://github.com/Dust-Games-Studio/Zed-Unity-Extension"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+sha2 = "0.10"
+zed_extension_api = "0.7.0"
