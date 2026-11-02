@@ -430,9 +430,9 @@ LICENSE
 
 There is no `Cargo.toml` and no `src/`. The `csharp-main/` directory currently in the
 working tree is a reference checkout and must not be committed; `.gitignore` will exclude
-it, along with `tests/.grammars/`, grammar build caches, and OS/editor noise. A
-`snippets/` directory is intentionally absent in this implementation and is reserved for
-the follow-up snippet work.
+it, along with `tests/.grammars/`, grammar build caches, and OS/editor noise. This
+implementation does not create or reference snippet files; the follow-up snippet work may
+populate a `snippets/` directory independently.
 
 ## 9. Validation
 
