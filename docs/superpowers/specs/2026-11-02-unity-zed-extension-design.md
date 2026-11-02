@@ -591,6 +591,10 @@ requirements, `.meta` safety, limitations, and development/validation instructio
 
 ## 12. Follow-ups
 
+- **Semantic completion:** UXML element/attribute completion, `.asmdef` assembly
+  references, and USS completion require a language server. The phased plan, reuse
+  inventory, and open decisions are in [`ROADMAP.md`](../../../ROADMAP.md); this work is
+  deferred beyond `0.1.0`.
 - **Additional snippets:** add more Unity snippet files under `snippets/` and register
   them in `extension.toml`. Snippet files are scoped by filename (`csharp.json` for C#).
 - **`.meta` automation:** a companion Unity Editor package (safe while Unity runs) or an
