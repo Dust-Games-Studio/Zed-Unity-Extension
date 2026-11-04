@@ -13,14 +13,8 @@ const LSP_BINARY: &str = "unity-asmdef-lsp";
 const LSP_REPO: &str = "Dust-Games-Studio/Zed-Unity-Extension";
 const LSP_TAG: &str = "unity-asmdef-lsp-v0.2.1";
 const CHECKSUMS_ASSET: &str = "SHA256SUMS";
-// Consumed by the UXML installer in Task 2.
-#[allow(dead_code)]
 const UXML_LSP_NAME: &str = "unity-uxml";
-// Consumed by the UXML installer in Task 2.
-#[allow(dead_code)]
 const LEM_MINX_REPO: &str = "redhat-developer/vscode-xml";
-// Consumed by the UXML installer in Task 2.
-#[allow(dead_code)]
 const LEM_MINX_TAG: &str = "0.29.3";
 const LEM_MINX_SHA256: &[(&str, &str)] = &[
     (
@@ -47,6 +41,38 @@ const LEM_MINX_SHA256: &[(&str, &str)] = &[
 
 struct UnityExtension {
     cached_binary_path: Option<String>,
+    cached_uxml_binary_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ServerKind {
+    Asmdef,
+    Uxml,
+}
+
+fn server_kind(language_server_id: &str) -> Option<ServerKind> {
+    match language_server_id {
+        LSP_NAME => Some(ServerKind::Asmdef),
+        UXML_LSP_NAME => Some(ServerKind::Uxml),
+        _ => None,
+    }
+}
+
+fn lemminx_binary_file(platform: Os, asset: &str) -> String {
+    match platform {
+        Os::Windows => format!("{asset}.exe"),
+        _ => asset.to_string(),
+    }
+}
+
+fn verify_sha256(expected: &str, actual: &str) -> Result<()> {
+    if expected.eq_ignore_ascii_case(actual) {
+        Ok(())
+    } else {
+        Err(format!(
+            "checksum mismatch: expected {expected}, got {actual}"
+        ))
+    }
 }
 
 impl UnityExtension {
@@ -76,16 +102,8 @@ impl UnityExtension {
         self.cached_binary_path = Some(path.clone());
         Ok(path)
     }
-}
 
-impl zed::Extension for UnityExtension {
-    fn new() -> Self {
-        Self {
-            cached_binary_path: None,
-        }
-    }
-
-    fn language_server_command(
+    fn asmdef_command(
         &mut self,
         language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
@@ -107,6 +125,81 @@ impl zed::Extension for UnityExtension {
             args: args.unwrap_or_default(),
             env: env.unwrap_or_default().into_iter().collect(),
         })
+    }
+
+    fn uxml_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<zed::Command> {
+        let binary = LspSettings::for_worktree(UXML_LSP_NAME, worktree)
+            .ok()
+            .and_then(|settings| settings.binary);
+        let (path, args, env) = match binary {
+            Some(binary) => (binary.path, binary.arguments, binary.env),
+            None => (None, None, None),
+        };
+        let command = match path {
+            Some(path) => path,
+            None => self.uxml_language_server_binary_path(language_server_id, worktree)?,
+        };
+
+        Ok(zed::Command {
+            command,
+            args: args.unwrap_or_default(),
+            env: env.unwrap_or_default().into_iter().collect(),
+        })
+    }
+
+    fn uxml_language_server_binary_path(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<String> {
+        if let Some(path) = worktree.which("lemminx") {
+            return Ok(path);
+        }
+
+        if let Some(path) = &self.cached_uxml_binary_path {
+            if is_file(path) {
+                return Ok(path.clone());
+            }
+        }
+
+        let path = install_lemminx(language_server_id).map_err(|error| {
+            format!(
+                "failed to install LemMinX {LEM_MINX_TAG} from {LEM_MINX_REPO}: {error}\n\
+                 Install LemMinX yourself and put `lemminx` on PATH, or point \
+                 `lsp.{UXML_LSP_NAME}.binary.path` at the binary in your Zed settings."
+            )
+        })?;
+
+        self.cached_uxml_binary_path = Some(path.clone());
+        Ok(path)
+    }
+}
+
+impl zed::Extension for UnityExtension {
+    fn new() -> Self {
+        Self {
+            cached_binary_path: None,
+            cached_uxml_binary_path: None,
+        }
+    }
+
+    fn language_server_command(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<zed::Command> {
+        match server_kind(language_server_id.as_ref()) {
+            Some(ServerKind::Asmdef) => self.asmdef_command(language_server_id, worktree),
+            Some(ServerKind::Uxml) => self.uxml_command(language_server_id, worktree),
+            None => Err(format!(
+                "unknown language server id: {}",
+                language_server_id.as_ref()
+            )),
+        }
     }
 }
 
@@ -160,6 +253,71 @@ fn install_binary(language_server_id: &LanguageServerId) -> Result<String> {
     result?;
 
     Ok(binary_path)
+}
+
+fn install_lemminx(language_server_id: &LanguageServerId) -> Result<String> {
+    let (platform, architecture) = zed::current_platform();
+    let asset = lemminx_asset(platform, architecture)?;
+    let binary_file = lemminx_binary_file(platform, asset);
+    let version_dir = format!("lemminx-{LEM_MINX_TAG}");
+    let binary_path = format!("{version_dir}/{binary_file}");
+
+    if is_file(&binary_path) {
+        return Ok(binary_path);
+    }
+
+    let expected = lemminx_sha256(asset)?;
+    zed::set_language_server_installation_status(
+        language_server_id,
+        &LanguageServerInstallationStatus::CheckingForUpdate,
+    );
+
+    let release = zed::github_release_by_tag_name(LEM_MINX_REPO, LEM_MINX_TAG)?;
+    let zip_name = format!("{asset}.zip");
+    let zip_asset = release
+        .assets
+        .iter()
+        .find(|candidate| candidate.name == zip_name)
+        .ok_or_else(|| format!("release {LEM_MINX_TAG} has no asset named {zip_name}"))?;
+
+    zed::set_language_server_installation_status(
+        language_server_id,
+        &LanguageServerInstallationStatus::Downloading,
+    );
+
+    let download_dir = format!("{version_dir}.download");
+    fs::remove_dir_all(&download_dir).ok();
+
+    let result = download_and_verify_lemminx(
+        &zip_asset.download_url,
+        &download_dir,
+        &binary_file,
+        expected,
+    );
+    if let Err(error) = result {
+        fs::remove_dir_all(&download_dir).ok();
+        return Err(error);
+    }
+
+    fs::remove_dir_all(&version_dir).ok();
+    fs::rename(&download_dir, &version_dir)
+        .map_err(|error| format!("failed to move {download_dir} to {version_dir}: {error}"))?;
+    Ok(binary_path)
+}
+
+fn download_and_verify_lemminx(
+    zip_url: &str,
+    download_dir: &str,
+    binary_file: &str,
+    expected: &str,
+) -> Result<()> {
+    zed::download_file(zip_url, download_dir, DownloadedFileType::Zip)
+        .map_err(|error| format!("failed to download {zip_url}: {error}"))?;
+    let downloaded = format!("{download_dir}/{binary_file}");
+    let actual = sha256_file(&downloaded)?;
+    verify_sha256(expected, &actual)?;
+    zed::make_file_executable(&downloaded)?;
+    Ok(())
 }
 
 fn download_and_verify(
@@ -218,8 +376,6 @@ fn asset_name(platform: Os, architecture: Architecture) -> Result<&'static str> 
     }
 }
 
-// Consumed by the UXML installer in Task 2.
-#[allow(dead_code)]
 fn lemminx_asset(platform: Os, architecture: Architecture) -> Result<&'static str> {
     match (platform, architecture) {
         (Os::Linux, Architecture::X8664) => Ok("lemminx-linux-x86_64"),
@@ -231,8 +387,6 @@ fn lemminx_asset(platform: Os, architecture: Architecture) -> Result<&'static st
     }
 }
 
-// Consumed by the UXML installer in Task 2.
-#[allow(dead_code)]
 fn lemminx_sha256(asset: &str) -> Result<&'static str> {
     LEM_MINX_SHA256
         .iter()
@@ -390,5 +544,32 @@ c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2 *unity-asmdef-l
             assert!(hash.bytes().all(|byte| byte.is_ascii_hexdigit()), "{asset}");
         }
         assert!(lemminx_sha256("lemminx-unknown").is_err());
+    }
+
+    #[test]
+    fn dispatches_known_language_server_ids() {
+        assert_eq!(server_kind("unity-asmdef"), Some(ServerKind::Asmdef));
+        assert_eq!(server_kind("unity-uxml"), Some(ServerKind::Uxml));
+        assert_eq!(server_kind("unknown"), None);
+    }
+
+    #[test]
+    fn names_the_windows_lemminx_executable() {
+        assert_eq!(
+            lemminx_binary_file(Os::Windows, "lemminx-win32"),
+            "lemminx-win32.exe"
+        );
+        assert_eq!(
+            lemminx_binary_file(Os::Linux, "lemminx-linux-x86_64"),
+            "lemminx-linux-x86_64"
+        );
+    }
+
+    #[test]
+    fn verifies_checksums_case_insensitively() {
+        assert!(verify_sha256("ABCDEF", "abcdef").is_ok());
+        let error = verify_sha256("abcdef", "abcdee").unwrap_err();
+        assert!(error.contains("expected abcdef"), "{error}");
+        assert!(error.contains("got abcdee"), "{error}");
     }
 }
