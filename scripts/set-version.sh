@@ -2,10 +2,10 @@
 # Set the Unity extension release version across the files that matter.
 #
 # Usage:
-#   ./scripts/set_version.sh 0.3.1
-#   ./scripts/set_version.sh v0.3.1
-#   ./scripts/set_version.sh 0.3.1 --bump-lsp
-#   ./scripts/set_version.sh 0.3.1 --dry-run
+#   ./scripts/set-version.sh 0.3.1
+#   ./scripts/set-version.sh v0.3.1
+#   ./scripts/set-version.sh 0.3.1 --bump-lsp
+#   ./scripts/set-version.sh 0.3.1 --dry-run
 #
 # Updates:
 #   - Cargo.toml       extension crate version
@@ -20,7 +20,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/set_version.sh <version> [--bump-lsp] [--dry-run] [--no-lock]
+Usage: ./scripts/set-version.sh <version> [--bump-lsp] [--dry-run] [--no-lock]
 
   <version>     New version, for example 0.3.1 or v0.3.1.
   --bump-lsp    Also set the unity-asmdef-lsp crate version in lsp/Cargo.toml.
