@@ -75,7 +75,10 @@ Tested with LemMinX `0.29.3` against Game Collector (Unity `6000.6.6f1`) and Oh 
 6. **Schema regeneration recovers.** LemMinX dynamically registers
    `workspace/didChangeWatchedFiles` for `**/*.xsd`, `**/*.dtd`, `**/*.rng`, and
    `**/*.rnc`. After copying a schema into place and sending the watched-file event,
-   completion went from 0 to 387 items without restarting the server.
+   completion went from 0 to 387 items without restarting the server. Completion
+   recovers without a restart, but the extension computes its validation defaults only
+   when the language server starts; a restart is needed to return to the completion-only
+   defaults after the schema appears.
 7. **Missing schema degrades safely.** Completion returns no Unity items and the server
    stays alive. With an association to the missing path and schema validation on,
    LemMinX publishes `schema_reference.4` naming the missing file; this is the clearest
@@ -242,6 +245,12 @@ creates it while the server is running. Until then, LemMinX publishes
 no Unity items. The server stays alive. A user who explicitly sets
 `validation.enabled=false` also suppresses this message.
 
+These missing-schema defaults apply only when the extension observes the schema as
+absent at language server start. If Unity creates the schema while the server is
+running, the association picks it up and completion returns without a restart, but
+validation stays enabled for that session. Restart the language server after the schema
+appears to restore the completion-only defaults in 8.1.
+
 The extension does not force validation on in any other state.
 
 ### 8.3 Why not `onValidSchema`
@@ -273,7 +282,7 @@ covers every `.uxml` in the worktree. Users in that setup can provide explicit
 |---|---|
 | LemMinX download fails | Actionable error with PATH and `lsp.unity-uxml.binary.path` instructions; asmdef server unaffected. |
 | Checksum mismatch | Delete the partial download and fail with expected/actual hashes. |
-| Schema missing | Server starts; no Unity completion; `schema_reference.4` names the missing file; recovers on watched-file event. |
+| Schema missing | Server starts; no Unity completion; `schema_reference.4` names the missing file; completion recovers on watched-file event, but validation stays forced on until the server restarts. |
 | Unity schema is invalid | Validation stays off by default; user can opt in and see LemMinX diagnostics. |
 | Namespaced custom element loses its prefix | Known LemMinX limitation; documented, not patched. |
 | Binary path configured but missing | Zed reports the launch failure; no fallback to a different binary. |
@@ -307,10 +316,12 @@ Manual checks on a real Unity project:
 
 1. Open a `.uxml`; confirm tag, attribute, and enum completion appears.
 2. Confirm an unknown tag is not completed.
-3. Rename `UIElementsSchema` temporarily; confirm the missing-schema diagnostic and that
-   the server stays alive.
-4. Restore the schema; confirm completion returns without restarting Zed (or document a
-   restart if Zed does not forward the watched-file event).
+3. Test the missing-schema path on a worktree where the schema is absent at server start,
+   or rename `UIElementsSchema` and restart the language server; confirm the
+   missing-schema diagnostic and that the server stays alive.
+4. Restore the schema; confirm completion returns without restarting Zed, then restart
+   the language server and confirm validation is off again (or document a restart if Zed
+   does not forward the watched-file event).
 5. Enable `lsp.unity-uxml.settings.xml.validation.enabled`; confirm diagnostics appear.
 6. Confirm `.asmdef` features are unchanged.
 

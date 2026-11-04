@@ -105,8 +105,10 @@ Unity-generated schema:
 ```
 
 Unity regenerates that schema when it imports scripts, so keep the Editor open when you
-add custom `UxmlFactory`/`UxmlElement` types; LemMinX reloads the schema through its
-watched-file registration.
+add custom `UxmlFactory`/`UxmlElement` types. LemMinX reloads the schema through its
+watched-file registration, so completion recovers without a restart. Validation defaults
+are fixed when the language server starts, though: if the schema appears later, restart
+the server to return to completion-only defaults.
 
 Completion for Unity tags, attributes, and enum values is on by default. Schema
 validation is **off by default** because some Unity versions generate XSD files that do
@@ -130,11 +132,14 @@ The full LemMinX settings object is accepted under `lsp.unity-uxml.settings`, us
 `xml` wrapper shown above. Relative `xml.catalogs` and
 `xml.fileAssociations[].systemId` paths are resolved against the project root.
 
-If `UIElementsSchema/UIElements.xsd` is missing, the server still starts but completion
-returns no Unity elements and LemMinX reports `schema_reference.4` naming the missing
-file. Generate the schema by opening a UXML file in Unity, or restart the language server
-after Unity creates it. Multi-Unity-project workspaces can set explicit
-`xml.fileAssociations` to route each project to its own schema.
+If `UIElementsSchema/UIElements.xsd` is missing when the language server starts, the
+server still starts but completion returns no Unity elements. The extension enables
+validation for that session so LemMinX reports `schema_reference.4` naming the missing
+file. Generate the schema by opening a UXML file in Unity, then restart the language
+server to restore completion-only defaults. Multi-Unity-project workspaces can set
+explicit `xml.fileAssociations` to route each project to its own schema; if you use
+explicit associations and have no root schema, also set `validation.enabled` to `false`
+to keep completion-only behavior.
 
 To use a local LemMinX instead:
 
@@ -390,8 +395,9 @@ Manual Zed check:
    listed.
 10. Open a `.uxml` in a Unity project with a generated `UIElementsSchema`; confirm tags,
     attributes, and enum values complete.
-11. Temporarily rename `UIElementsSchema`; confirm the missing-schema diagnostic appears
-    and the server stays running. Restore it and confirm completion returns.
+11. Temporarily rename `UIElementsSchema` and restart the language server; confirm
+    `schema_reference.4` names the missing file and the server stays running. Restore it,
+    restart, and confirm completion returns and validation is off again.
 12. Enable UXML validation in `lsp.unity-uxml.settings`; confirm diagnostics appear only
     after opting in.
 13. Open the committed broken fixture and confirm the parse diagnostic appears; confirm a

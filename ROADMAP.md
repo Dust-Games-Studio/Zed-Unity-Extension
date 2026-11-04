@@ -181,7 +181,7 @@ Unity project, with cross-platform release artifacts.
 
 ### Phase 4 — USS completion
 
-**Status: deferred.** USS completion is deferred; UXML completion shipped in `0.3.0`.
+**Status: deferred.** USS completion remains deferred; UXML completion shipped in `0.3.0`.
 
 **Goal:** Complete USS properties, values, selectors, and asset URLs.
 
@@ -244,7 +244,7 @@ the chosen path.
    Resolved: `0.1.0` shipped first; `0.2.x` adds Rust and the asmdef server.
 2. One extension or a separate language-server extension? Resolved: one.
 3. For USS, wait for `unity_code_native` releases or build a small server?
-   Still open; USS is out of scope for `0.2.x`.
+   Still open; USS is out of scope for `0.3.x`.
 4. Is a static UXML fallback schema acceptable when Unity has not generated
    `UIElementsSchema`? Resolved: no static fallback schema; the missing-schema behavior
    is documented in the `0.3.0` design.

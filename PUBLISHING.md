@@ -56,8 +56,9 @@ Then complete the manual Zed check at the exact commit you will submit:
 9. Open project symbols and confirm project and package assemblies are listed.
 10. Open a `.uxml` with a generated `UIElementsSchema`; confirm tag, attribute, and enum
     completion, including a project custom element if the project has one.
-11. Temporarily rename the schema directory; confirm `schema_reference.4` names the
-    missing file and that Zed stays responsive. Restore it and confirm completion returns.
+11. Temporarily rename the schema directory and restart the language server; confirm
+    `schema_reference.4` names the missing file and that Zed stays responsive. Restore it,
+    restart, and confirm completion returns and validation is off again.
 12. Enable `lsp.unity-uxml.settings.xml.validation.enabled` and confirm schema diagnostics
     appear only after opting in.
 13. Open `tests/fixtures/lsp-project/Assets/Broken/Broken.asmdef` and confirm the parse
@@ -78,7 +79,9 @@ The registry permits a Rust extension that provides language servers. It must no
 bundle the server binary. This repository keeps `unity-asmdef-lsp` in the `lsp/`
 workspace member and downloads a pinned release at runtime.
 
-Publish the server first, using a tag matching the version in `src/lib.rs`:
+For a language-server release, publish the `unity-asmdef-lsp` binary first, using a tag
+matching the version in `src/lib.rs` (the example below is the current asmdef LSP tag; an
+extension-only `0.3.0` release does not need a new server tag):
 
 ```text
 unity-asmdef-lsp-v0.2.1
@@ -96,9 +99,10 @@ The extension verifies the downloaded binary against `SHA256SUMS` before marking
 executable. Users can always bypass the download with `lsp.unity-asmdef.binary.path`
 or a `unity-asmdef-lsp` binary on `PATH`.
 
-The UXML server is upstream LemMinX `0.29.3`, downloaded from
-`redhat-developer/vscode-xml` and verified against pinned SHA-256 values in
-`src/lib.rs`. It is not built by this repository and is not bundled with the extension.
+The UXML server is upstream LemMinX `0.29.3`, licensed EPL-2.0. It is downloaded at
+runtime from `redhat-developer/vscode-xml` and verified against pinned SHA-256 values in
+`src/lib.rs`. It is not built by this repository, is not bundled with the extension, and
+is not modified.
 The extension release does not require a new `unity-asmdef-lsp` tag when only the
 extension changes.
 
