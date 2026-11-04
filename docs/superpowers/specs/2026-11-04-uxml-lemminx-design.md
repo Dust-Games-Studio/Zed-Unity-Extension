@@ -334,7 +334,8 @@ Manual checks on a real Unity project:
 - PUBLISHING: version `0.3.0`, two language servers, LemMinX upstream license and
   runtime download, manual UXML checks.
 - Bump `Cargo.toml`, `extension.toml`, and `Cargo.lock` to `0.3.0`. Keep `lsp/` at
-  `0.2.1` and `LSP_TAG = "unity-asmdef-lsp-v0.2.1"`.
+  `0.2.1` and set `LSP_TAG = "v0.3.0"`. The release tag is `v<extension-version>` and
+  carries both the extension source and the asmdef LSP assets.
 - Do not modify `.github/workflows/release-lsp.yml`; the existing
   `actions/upload-artifact@v7` edit belongs to the user.
 

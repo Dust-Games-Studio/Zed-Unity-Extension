@@ -79,12 +79,13 @@ The registry permits a Rust extension that provides language servers. It must no
 bundle the server binary. This repository keeps `unity-asmdef-lsp` in the `lsp/`
 workspace member and downloads a pinned release at runtime.
 
-For a language-server release, publish the `unity-asmdef-lsp` binary first, using a tag
-matching the version in `src/lib.rs` (the example below is the current asmdef LSP tag; an
-extension-only `0.3.0` release does not need a new server tag):
+Every extension release uses one tag, `v<extension-version>`. Push that tag after setting
+`LSP_TAG` in `src/lib.rs`; the release workflow builds the `unity-asmdef-lsp` binary and
+attaches it with `SHA256SUMS` to that same release. The current release is `v0.3.0`, and
+its asmdef assets were built from the `0.2.1` LSP crate:
 
 ```text
-unity-asmdef-lsp-v0.2.1
+v0.3.0
 ```
 
 The release workflow builds these assets and generates `SHA256SUMS`:
@@ -103,8 +104,9 @@ The UXML server is upstream LemMinX `0.29.3`, licensed EPL-2.0. It is downloaded
 runtime from `redhat-developer/vscode-xml` and verified against pinned SHA-256 values in
 `src/lib.rs`. It is not built by this repository, is not bundled with the extension, and
 is not modified.
-The extension release does not require a new `unity-asmdef-lsp` tag when only the
-extension changes.
+
+There is no separate `unity-asmdef-lsp-v*` tag. The tag in `src/lib.rs` must match
+`v<extension-version>`; a unit test enforces this.
 
 ### Snippets
 
@@ -167,11 +169,11 @@ Update the "pending" note in the README installation section at that point.
 
 ## Updating an already published extension
 
-1. For an extension-only release, bump `version` in `extension.toml` and `Cargo.toml`;
-   commit and push `main`.
-2. For a language-server release, also bump `lsp/Cargo.toml` and the pinned `LSP_TAG` in
-   `src/lib.rs`, then push the `unity-asmdef-lsp-v<version>` tag.
-3. Push `main` to the public repository.
+1. Bump `version` in `extension.toml` and `Cargo.toml`, and set `LSP_TAG` in `src/lib.rs`
+   to `v<version>`. Bump `lsp/Cargo.toml` only when the asmdef server changes.
+2. Commit and push `main`.
+3. Push the `v<version>` tag. The release workflow builds and attaches the asmdef LSP
+   assets plus `SHA256SUMS` to that release.
 4. In your `zed-industries/extensions` fork:
 
    ```bash

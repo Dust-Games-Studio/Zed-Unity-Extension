@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Extension version becomes `0.3.0` in `Cargo.toml` and `extension.toml`; `lsp/Cargo.toml` stays `0.2.1`; `LSP_TAG` stays `unity-asmdef-lsp-v0.2.1`.
+- Extension version becomes `0.3.0` in `Cargo.toml` and `extension.toml`; `lsp/Cargo.toml` stays `0.2.1`; `LSP_TAG` becomes `v0.3.0` (the unified extension release tag).
 - LemMinX tag is exactly `0.29.3` from `redhat-developer/vscode-xml`.
 - Pinned SHA-256 values, verbatim:
   - `lemminx-linux-x86_64`: `84cbbe3c31eb158799327d5f68a0dc876e81c431da596747b92eecffe956b3f2`
@@ -894,8 +894,7 @@ Change `Cargo.toml` line 3 to:
 version = "0.3.0"
 ```
 
-Leave `lsp/Cargo.toml` at `0.2.1` and leave `LSP_TAG` in `src/lib.rs` at
-`unity-asmdef-lsp-v0.2.1`.
+Leave `lsp/Cargo.toml` at `0.2.1` and set `LSP_TAG` in `src/lib.rs` to `v0.3.0`.
 
 - [ ] **Step 2: Update the README**
 
@@ -1094,7 +1093,7 @@ Replace the update instructions in `## Updating an already published extension` 
 1. For an extension-only release, bump `version` in `extension.toml` and `Cargo.toml`;
    commit and push `main`.
 2. For a language-server release, also bump `lsp/Cargo.toml` and the pinned `LSP_TAG` in
-   `src/lib.rs`, then push the `unity-asmdef-lsp-v<version>` tag.
+   `src/lib.rs`, then push the `v<version>` tag.
 3. Push `main` to the public repository.
 4. In your `zed-industries/extensions` fork:
 

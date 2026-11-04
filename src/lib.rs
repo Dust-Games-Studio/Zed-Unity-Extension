@@ -12,7 +12,7 @@ use zed_extension_api::{
 const LSP_NAME: &str = "unity-asmdef";
 const LSP_BINARY: &str = "unity-asmdef-lsp";
 const LSP_REPO: &str = "Dust-Games-Studio/Zed-Unity-Extension";
-const LSP_TAG: &str = "unity-asmdef-lsp-v0.2.1";
+const LSP_TAG: &str = "v0.3.0";
 const CHECKSUMS_ASSET: &str = "SHA256SUMS";
 const UXML_LSP_NAME: &str = "unity-uxml";
 const LEM_MINX_REPO: &str = "redhat-developer/vscode-xml";
@@ -892,5 +892,10 @@ c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2 *unity-asmdef-l
             absolute_path("schemas/a.xsd", "/project/"),
             "/project/schemas/a.xsd"
         );
+    }
+
+    #[test]
+    fn asmdef_release_tag_matches_extension_version() {
+        assert_eq!(LSP_TAG, format!("v{}", env!("CARGO_PKG_VERSION")));
     }
 }
