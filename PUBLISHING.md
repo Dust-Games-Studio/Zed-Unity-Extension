@@ -169,7 +169,7 @@ Update the "pending" note in the README installation section at that point.
 
 ## Updating an already published extension
 
-1. Run `./set_version <version>` from the repository root. It updates `Cargo.toml`,
+1. Run `./scripts/set_version.sh <version>` from the repository root. It updates `Cargo.toml`,
    `extension.toml`, `src/lib.rs`, and `Cargo.lock`. Add `--bump-lsp` when the asmdef
    server changed.
 2. Commit and push `main`.
