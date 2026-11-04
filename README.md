@@ -68,7 +68,9 @@ Then either put `target/release/unity-asmdef-lsp` on `PATH` or configure it:
   "lsp": {
     "unity-asmdef": {
       "binary": {
-        "path": "/absolute/path/to/unity-asmdef-lsp"
+        "path": "/absolute/path/to/unity-asmdef-lsp",
+        "arguments": [],
+        "env": {}
       }
     }
   }

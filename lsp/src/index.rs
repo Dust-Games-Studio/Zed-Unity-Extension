@@ -255,7 +255,7 @@ pub fn build(
     workspace_roots: &[PathBuf],
     open_documents: &HashMap<PathBuf, String>,
 ) -> WorkspaceIndex {
-    let mut projects = paths::discover_unity_projects(workspace_roots, 4);
+    let mut projects = paths::discover_unity_projects(workspace_roots, 3);
 
     if projects.is_empty() {
         for root in workspace_roots {

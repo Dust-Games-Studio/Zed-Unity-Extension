@@ -82,7 +82,7 @@ impl zed::Extension for UnityExtension {
 fn install_binary(language_server_id: &LanguageServerId) -> Result<String> {
     let (platform, architecture) = zed::current_platform();
     let asset = asset_name(platform, architecture)?;
-    let version_dir = format!("{LSP_BINARY}-{LSP_TAG}");
+    let version_dir = LSP_TAG.to_string();
     let binary_path = format!("{version_dir}/{asset}");
 
     if is_file(&binary_path) {
