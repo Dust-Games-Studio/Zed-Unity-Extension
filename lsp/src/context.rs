@@ -245,7 +245,9 @@ fn value_kind(frame: &Frame) -> Option<CompletionKind> {
 }
 
 fn value_kind_for_object(path: &[String], key: &str) -> Option<CompletionKind> {
-    if path.len() == 1 && path[0] == "versionDefines" && key == "name" {
+    if path.is_empty() && key == "reference" {
+        Some(CompletionKind::References)
+    } else if path.len() == 1 && path[0] == "versionDefines" && key == "name" {
         Some(CompletionKind::VersionDefineName)
     } else {
         None
@@ -444,6 +446,13 @@ mod tests {
                 .kind,
             CompletionKind::VersionDefineName
         );
+    }
+
+    #[test]
+    fn completes_asmref_reference_values() {
+        let context = context_at(r#"{"reference":"Sha"}"#, "Sha").unwrap();
+        assert_eq!(context.kind, CompletionKind::References);
+        assert_eq!(context.prefix, "Sha");
     }
 
     #[test]

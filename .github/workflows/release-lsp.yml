@@ -18,9 +18,9 @@ jobs:
             asset: unity-asmdef-lsp-linux-x86_64
           - os: ubuntu-24.04-arm
             asset: unity-asmdef-lsp-linux-aarch64
-          - os: macos-13
+          - os: macos-15-intel
             asset: unity-asmdef-lsp-macos-x86_64
-          - os: macos-14
+          - os: macos-15
             asset: unity-asmdef-lsp-macos-aarch64
           - os: windows-latest
             asset: unity-asmdef-lsp-windows-x86_64.exe
@@ -28,6 +28,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Test
+        run: cargo test --workspace
       - name: Build
         run: cargo build --release -p unity-asmdef-lsp
       - name: Stage artifact

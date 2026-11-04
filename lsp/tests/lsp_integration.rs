@@ -210,6 +210,7 @@ fn fixture() -> tempfile::TempDir {
         "fileFormatVersion: 2\nguid: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
     );
     write(&root.join("Assets/Broken.asmdef"), r#"{"name": }"#);
+    write(&root.join("Assets/Refs/Ref.asmref"), r#"{"reference":""}"#);
     temp
 }
 
@@ -224,6 +225,11 @@ fn completes_defines_and_reports_malformed_files() {
     let game_path = root.join("Assets/Game/Game.asmdef");
     let game_url = file_url(&game_path);
     let broken_url = file_url(&root.join("Assets/Broken.asmdef"));
+    let shared_path = root.join("Assets/Shared/Shared.asmdef");
+    let shared_url = file_url(&shared_path);
+    let ref_path = root.join("Assets/Refs/Ref.asmref");
+    let ref_url = file_url(&ref_path);
+    let ref_text = std::fs::read_to_string(&ref_path).unwrap();
     let game_text = std::fs::read_to_string(&game_path).unwrap();
 
     let mut client = LspClient::start();
@@ -236,6 +242,7 @@ fn completes_defines_and_reports_malformed_files() {
         }),
     );
     assert!(result["capabilities"]["completionProvider"].is_object());
+    assert!(result["capabilities"]["textDocumentSync"]["save"].is_boolean());
     client.notify("initialized", json!({}));
 
     let diagnostics = client.wait_for_diagnostics(broken_url.as_str());
@@ -286,6 +293,59 @@ fn completes_defines_and_reports_malformed_files() {
             .as_str()
             .is_some_and(|uri| uri.ends_with("Shared.asmdef"))),
         "missing Shared definition: {locations:?}"
+    );
+
+    client.notify(
+        "textDocument/didChange",
+        json!({
+            "textDocument": { "uri": shared_url, "version": 2 },
+            "contentChanges": [{ "text": "{ \"name\": }" }],
+        }),
+    );
+    let diagnostics = client.wait_for_diagnostics(shared_url.as_str());
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic["code"] == "asmdef.parse-error"),
+        "missing Shared parse diagnostic: {diagnostics:?}"
+    );
+
+    let completion = client.request(
+        "textDocument/completion",
+        json!({
+            "textDocument": { "uri": game_url },
+            "position": { "line": 0, "character": empty_offset },
+        }),
+    );
+    let items = completion_items(&completion);
+    assert!(
+        items.iter().any(|item| item["label"] == "Shared"),
+        "invalid open target must stay indexed: {items:?}"
+    );
+
+    client.notify(
+        "textDocument/didOpen",
+        json!({
+            "textDocument": {
+                "uri": ref_url,
+                "languageId": "json",
+                "version": 1,
+                "text": ref_text,
+            }
+        }),
+    );
+    let ref_offset = ref_text.find("\"\"").unwrap() + 1;
+    let completion = client.request(
+        "textDocument/completion",
+        json!({
+            "textDocument": { "uri": ref_url },
+            "position": { "line": 0, "character": ref_offset },
+        }),
+    );
+    let items = completion_items(&completion);
+    assert!(
+        items.iter().any(|item| item["label"] == "Shared"),
+        "missing asmref completion: {items:?}"
     );
 }
 

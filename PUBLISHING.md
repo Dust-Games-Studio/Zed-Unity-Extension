@@ -119,7 +119,7 @@ upstream.
    ```toml
    [unity]
    submodule = "extensions/unity"
-   version = "0.1.0"
+   version = "0.2.0"
    ```
 
    The `version` must exactly match `version` in this repository's

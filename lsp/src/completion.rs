@@ -345,12 +345,14 @@ mod tests {
     fn file(path: &str, name: &str, guid: Option<&str>, external: bool) -> IndexedFile {
         let text = format!(r#"{{ "name": "{name}" }}"#);
         let parsed = parse::parse_file(Path::new("x.asmdef"), &text);
+        let text: Arc<str> = Arc::from(text);
         IndexedFile {
             kind: FileKind::Asmdef,
             path: PathBuf::from(path),
             relative_path: path.to_string(),
             external,
-            text: Arc::from(text),
+            text: text.clone(),
+            data_text: text,
             diagnostics: parsed.diagnostics,
             asmdef: parsed.asmdef,
             asmref: None,
@@ -446,6 +448,19 @@ mod tests {
         let dll_items = complete(r#"{"precompiledReferences":["New"]}"#, "New");
         assert!(labels(&dll_items).contains(&"Newtonsoft.Json.dll"));
         assert!(labels(&dll_items).contains(&"Unity.InputSystem.dll"));
+    }
+
+    #[test]
+    fn completes_asmref_reference_values() {
+        let text = r#"{"reference":"Sha"}"#;
+        let offset = text.find("Sha").unwrap() + 3;
+        let items = completions(
+            &project(),
+            Path::new("/project/Assets/Ref.asmref"),
+            text,
+            offset,
+        );
+        assert!(labels(&items).contains(&"Shared"));
     }
 
     #[test]

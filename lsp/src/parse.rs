@@ -246,7 +246,7 @@ pub fn read_guid(meta_path: &Path) -> Option<String> {
         };
         let guid = rest.trim().trim_matches('"').trim();
         if !guid.is_empty() {
-            return Some(guid.to_string());
+            return Some(guid.to_ascii_lowercase());
         }
     }
     None
@@ -392,6 +392,7 @@ fn parse_asmdef_object(
     let exclude_platforms = string_array_field(object, "excludePlatforms", text, diagnostics);
     let precompiled_references =
         string_array_field(object, "precompiledReferences", text, diagnostics);
+    let _ = string_array_field(object, "defineConstraints", text, diagnostics);
     let version_defines = version_defines_field(object, text, diagnostics);
 
     for key in [
@@ -664,6 +665,12 @@ mod tests {
         );
         assert!(parsed.valid_json);
         assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    }
+
+    #[test]
+    fn reports_wrong_define_constraints_type() {
+        let parsed = parse_asmdef(r#"{ "name": "Game", "defineConstraints": "FOO" }"#);
+        assert_eq!(codes(&parsed), vec!["asmdef.invalid-field"]);
     }
 
     #[test]

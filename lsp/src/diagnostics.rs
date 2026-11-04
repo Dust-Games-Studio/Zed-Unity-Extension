@@ -187,7 +187,9 @@ fn add_cycle_diagnostics(
                     targets.extend(indices.iter().copied());
                 }
             }
-            targets.into_iter().collect()
+            let mut targets: Vec<_> = targets.into_iter().collect();
+            targets.sort_unstable();
+            targets
         })
         .collect();
 
@@ -197,10 +199,11 @@ fn add_cycle_diagnostics(
             continue;
         }
 
-        let names: Vec<String> = component
+        let mut names: Vec<String> = component
             .iter()
             .filter_map(|index| nodes[*index].name().map(str::to_string))
             .collect();
+        names.sort();
         if names.is_empty() {
             continue;
         }
@@ -321,6 +324,7 @@ mod tests {
             relative_path: path.to_string(),
             external: false,
             text: Arc::from(text),
+            data_text: Arc::from(text),
             diagnostics: parsed.diagnostics,
             asmdef: parsed.asmdef,
             asmref: parsed.asmref,

@@ -18,6 +18,9 @@ pub struct IndexedFile {
     pub relative_path: String,
     pub external: bool,
     pub text: Arc<str>,
+    /// Text that the spans in `asmdef`/`asmref` refer to. It is the last valid
+    /// parse for an open document whose current text is temporarily invalid.
+    pub data_text: Arc<str>,
     pub diagnostics: Vec<RawDiagnostic>,
     pub asmdef: Option<AsmdefData>,
     pub asmref: Option<AsmrefData>,
@@ -132,7 +135,7 @@ impl ProjectIndex {
 
     pub fn find_by_guid(&self, guid: &str) -> Vec<&IndexedFile> {
         self.guid_index
-            .get(guid)
+            .get(&guid.to_ascii_lowercase())
             .map(|indices| {
                 indices
                     .iter()
@@ -190,19 +193,35 @@ impl WorkspaceIndex {
         };
         let project_root = project.root.clone();
         let parsed = parse::parse_file(&path, text);
-        let guid = if parsed.kind == FileKind::Asmdef {
-            parse::read_guid(&meta_path(&path))
+        let existing = project.files.iter().find(|file| file.path == path).cloned();
+
+        let (asmdef, asmref, data_text, guid) = if parsed.valid_json {
+            let guid = if parsed.kind == FileKind::Asmdef {
+                parse::read_guid(&meta_path(&path))
+            } else {
+                None
+            };
+            (parsed.asmdef, parsed.asmref, Arc::<str>::from(text), guid)
+        } else if let Some(existing) = existing {
+            (
+                existing.asmdef,
+                existing.asmref,
+                existing.data_text,
+                existing.guid,
+            )
         } else {
-            None
+            (None, None, Arc::<str>::from(text), None)
         };
+
         let file = IndexedFile {
             kind: parsed.kind,
             relative_path: relative_path(&project_root, &path),
             external: is_external(&project_root, &path),
             text: Arc::from(text),
+            data_text,
             diagnostics: parsed.diagnostics,
-            asmdef: parsed.asmdef,
-            asmref: parsed.asmref,
+            asmdef,
+            asmref,
             guid,
             path: path.clone(),
         };
@@ -355,11 +374,13 @@ fn scan_dir(
             } else {
                 None
             };
+            let text: Arc<str> = Arc::from(text);
             project.files.push(IndexedFile {
                 kind: parsed.kind,
                 relative_path: relative_path(project_root, &path),
                 external,
-                text: Arc::from(text),
+                text: text.clone(),
+                data_text: text,
                 diagnostics: parsed.diagnostics,
                 asmdef: parsed.asmdef,
                 asmref: parsed.asmref,
@@ -707,6 +728,50 @@ mod tests {
             .contains(&"asmdef.unresolved-reference".to_string()));
         assert!(codes_for(&root.join("Assets/Refs/ByGuid.asmref")).is_empty());
         assert!(codes_for(&root.join("Assets/Bom.asmdef")).is_empty());
+    }
+
+    #[test]
+    fn keeps_last_valid_entry_while_an_open_buffer_is_invalid() {
+        let temp = fixture();
+        let mut index = build(&[temp.path().to_path_buf()], &HashMap::new());
+        let shared = normalize_path(&temp.path().join("Assets/Shared/Shared.asmdef"));
+        let game = normalize_path(&temp.path().join("Assets/Game/Game.asmdef"));
+
+        assert!(index.replace_file(&shared, r#"{ "name": }"#));
+        let shared_file = index.projects[0].file(&shared).unwrap();
+        assert!(shared_file
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "asmdef.parse-error"));
+        assert_eq!(shared_file.name(), Some("Shared"));
+
+        let diagnostics = crate::diagnostics::compute(&index);
+        let game_url = tower_lsp::lsp_types::Url::from_file_path(game).unwrap();
+        let game_codes: Vec<String> = diagnostics
+            .get(&game_url)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| match &item.code {
+                        Some(tower_lsp::lsp_types::NumberOrString::String(code)) => {
+                            Some(code.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert!(
+            !game_codes.contains(&"asmdef.unresolved-reference".to_string()),
+            "temporarily invalid target must stay indexed: {game_codes:?}"
+        );
+
+        assert!(index.replace_file(&shared, r#"{ "name": "Shared" }"#));
+        assert!(index.projects[0]
+            .file(&shared)
+            .unwrap()
+            .diagnostics
+            .is_empty());
     }
 
     #[test]

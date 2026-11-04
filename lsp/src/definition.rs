@@ -29,10 +29,10 @@ pub fn locations(project: &ProjectIndex, file: &IndexedFile, offset: usize) -> V
         .filter_map(|target| {
             let uri = Url::from_file_path(&target.path).ok()?;
             let span = target.name_span().unwrap_or(TextRange::new(0, 0));
-            let line_index = LineIndex::new(&target.text);
+            let line_index = LineIndex::new(&target.data_text);
             Some(Location {
                 uri,
-                range: line_index.range(&target.text, span.start, span.end),
+                range: line_index.range(&target.data_text, span.start, span.end),
             })
         })
         .collect()
@@ -55,6 +55,7 @@ mod tests {
             relative_path: path.to_string(),
             external: false,
             text: Arc::from(text),
+            data_text: Arc::from(text),
             diagnostics: parsed.diagnostics,
             asmdef: parsed.asmdef,
             asmref: parsed.asmref,

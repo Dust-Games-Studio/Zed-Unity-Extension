@@ -7,11 +7,13 @@ use tokio::sync::{Mutex, RwLock};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
     CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams,
-    DidChangeWatchedFilesParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams, GotoDefinitionParams, GotoDefinitionResponse, InitializeParams,
-    InitializeResult, InitializedParams, MessageType, OneOf, ServerCapabilities, ServerInfo,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Url, WorkspaceFoldersServerCapabilities,
-    WorkspaceServerCapabilities,
+    DidChangeWatchedFilesParams, DidChangeWatchedFilesRegistrationOptions,
+    DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
+    DidSaveTextDocumentParams, FileSystemWatcher, GlobPattern, GotoDefinitionParams,
+    GotoDefinitionResponse, InitializeParams, InitializeResult, InitializedParams, MessageType,
+    OneOf, Registration, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url, WatchKind,
+    WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
 };
 use tower_lsp::{Client, LanguageServer};
 
@@ -40,6 +42,7 @@ struct State {
     open_documents: HashMap<PathBuf, OpenDocument>,
     published: HashMap<Url, Vec<tower_lsp::lsp_types::Diagnostic>>,
     watcher: Option<WatcherHandle>,
+    supports_watched_files: bool,
 }
 
 struct OpenDocument {
@@ -60,7 +63,7 @@ impl Backend {
 }
 
 impl Inner {
-    async fn open_document(&self, path: PathBuf, text: String, version: i32) {
+    async fn open_document(&self, path: PathBuf, text: String, version: i32) -> bool {
         let path = index::normalize_path(&path);
         let mut added_root = false;
         {
@@ -87,6 +90,7 @@ impl Inner {
         } else {
             self.apply_text(path, text).await;
         }
+        added_root
     }
 
     async fn change_document(&self, path: PathBuf, text: String, version: i32) {
@@ -164,7 +168,7 @@ impl Inner {
         let _guard = self.update_lock.lock().await;
         let (roots, open_documents) = {
             let state = self.state.read().await;
-            let open_documents = state
+            let open_documents: HashMap<PathBuf, String> = state
                 .open_documents
                 .iter()
                 .map(|(path, document)| (path.clone(), document.text.clone()))
@@ -172,13 +176,18 @@ impl Inner {
             (state.roots.clone(), open_documents)
         };
 
-        let index = tokio::task::spawn_blocking(move || index::build(&roots, &open_documents))
+        let index = tokio::task::spawn_blocking(move || index::build(&roots, &HashMap::new()))
             .await
             .unwrap_or_default();
 
         {
             let mut state = self.state.write().await;
             state.index = index;
+            // Overlay open buffers after the disk scan. `replace_file` retains the
+            // last valid parse for a buffer that is temporarily invalid JSON.
+            for (path, text) in open_documents {
+                state.index.replace_file(&path, &text);
+            }
         }
         self.publish_diagnostics().await;
     }
@@ -277,16 +286,29 @@ impl LanguageServer for Backend {
         .await
         .unwrap_or_default();
 
+        let supports_watched_files = params
+            .capabilities
+            .workspace
+            .and_then(|workspace| workspace.did_change_watched_files)
+            .and_then(|watched| watched.dynamic_registration)
+            .unwrap_or(false);
         {
             let mut state = self.inner.state.write().await;
             state.roots = roots;
             state.index = index;
+            state.supports_watched_files = supports_watched_files;
         }
 
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
-                text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
+                text_document_sync: Some(TextDocumentSyncCapability::Options(
+                    TextDocumentSyncOptions {
+                        open_close: Some(true),
+                        change: Some(TextDocumentSyncKind::FULL),
+                        will_save: Some(false),
+                        will_save_wait_until: Some(false),
+                        save: Some(TextDocumentSyncSaveOptions::Supported(true)),
+                    },
                 )),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
@@ -314,6 +336,25 @@ impl LanguageServer for Backend {
         self.inner.publish_diagnostics().await;
         self.inner.start_watcher().await;
 
+        if self.inner.state.read().await.supports_watched_files {
+            let client = self.inner.client.clone();
+            tokio::spawn(async move {
+                let registration = watched_files_registration();
+                match tokio::time::timeout(
+                    Duration::from_secs(2),
+                    client.register_capability(vec![registration]),
+                )
+                .await
+                {
+                    Ok(Ok(())) => log::info!("registered workspace/didChangeWatchedFiles"),
+                    Ok(Err(error)) => {
+                        log::warn!("failed to register watched-file notifications: {error}")
+                    }
+                    Err(_) => log::warn!("timed out registering watched-file notifications"),
+                }
+            });
+        }
+
         let summary = {
             let state = self.inner.state.read().await;
             let projects = state.index.projects.len();
@@ -339,13 +380,17 @@ impl LanguageServer for Backend {
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         if let Some(path) = uri_to_path(&params.text_document.uri) {
-            self.inner
+            let added_root = self
+                .inner
                 .open_document(
                     path,
                     params.text_document.text,
                     params.text_document.version,
                 )
                 .await;
+            if added_root {
+                self.inner.start_watcher().await;
+            }
         }
     }
 
@@ -373,6 +418,28 @@ impl LanguageServer for Backend {
 
     async fn did_change_watched_files(&self, _params: DidChangeWatchedFilesParams) {
         self.inner.refresh_all().await;
+    }
+
+    async fn did_change_workspace_folders(&self, params: DidChangeWorkspaceFoldersParams) {
+        {
+            let mut state = self.inner.state.write().await;
+            for removed in params.event.removed {
+                if let Ok(path) = removed.uri.to_file_path() {
+                    let path = index::normalize_path(&path);
+                    state.roots.retain(|root| root != &path);
+                }
+            }
+            for added in params.event.added {
+                if let Ok(path) = added.uri.to_file_path() {
+                    let path = index::normalize_path(&path);
+                    if !state.roots.contains(&path) {
+                        state.roots.push(path);
+                    }
+                }
+            }
+        }
+        self.inner.refresh_all().await;
+        self.inner.start_watcher().await;
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -466,4 +533,36 @@ fn workspace_roots(params: &InitializeParams) -> Vec<PathBuf> {
 
 fn uri_to_path(uri: &Url) -> Option<PathBuf> {
     uri.to_file_path().ok()
+}
+
+fn watched_files_registration() -> Registration {
+    Registration {
+        id: "unity-asmdef-watched-files".to_string(),
+        method: "workspace/didChangeWatchedFiles".to_string(),
+        register_options: Some(
+            serde_json::to_value(DidChangeWatchedFilesRegistrationOptions {
+                watchers: vec![FileSystemWatcher {
+                    glob_pattern: GlobPattern::String("**/*.{asmdef,asmref,meta,json}".to_string()),
+                    kind: Some(WatchKind::Create | WatchKind::Change | WatchKind::Delete),
+                }],
+            })
+            .expect("watched-file registration options serialize"),
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn watched_files_registration_targets_index_inputs() {
+        let registration = watched_files_registration();
+        assert_eq!(registration.method, "workspace/didChangeWatchedFiles");
+        let options = registration.register_options.unwrap();
+        assert_eq!(
+            options["watchers"][0]["globPattern"],
+            "**/*.{asmdef,asmref,meta,json}"
+        );
+    }
 }
