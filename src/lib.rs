@@ -3,6 +3,7 @@ use std::fs;
 use std::io::Read;
 
 use sha2::{Digest, Sha256};
+use zed_extension_api::serde_json::{json, Value};
 use zed_extension_api::{
     self as zed, settings::LspSettings, Architecture, DownloadedFileType, LanguageServerId,
     LanguageServerInstallationStatus, Os, Result,
@@ -200,6 +201,53 @@ impl zed::Extension for UnityExtension {
                 language_server_id.as_ref()
             )),
         }
+    }
+
+    fn language_server_initialization_options(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<Value>> {
+        if server_kind(language_server_id.as_ref()) != Some(ServerKind::Uxml) {
+            return Ok(None);
+        }
+
+        let settings = LspSettings::for_worktree(UXML_LSP_NAME, worktree).ok();
+        let user_initialization = settings
+            .as_ref()
+            .and_then(|settings| settings.initialization_options.clone());
+        let user_settings = settings.and_then(|settings| settings.settings);
+        let root = worktree.root_path();
+        let schema_present = worktree
+            .read_text_file("UIElementsSchema/UIElements.xsd")
+            .is_ok();
+
+        Ok(Some(uxml_initialization_options(
+            user_initialization,
+            &root,
+            schema_present,
+            user_settings,
+        )))
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        language_server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<Value>> {
+        if server_kind(language_server_id.as_ref()) != Some(ServerKind::Uxml) {
+            return Ok(None);
+        }
+
+        let user_settings = LspSettings::for_worktree(UXML_LSP_NAME, worktree)
+            .ok()
+            .and_then(|settings| settings.settings);
+        let root = worktree.root_path();
+        let schema_present = worktree
+            .read_text_file("UIElementsSchema/UIElements.xsd")
+            .is_ok();
+
+        Ok(Some(uxml_settings(&root, schema_present, user_settings)))
     }
 }
 
@@ -442,11 +490,134 @@ fn is_file(path: &str) -> bool {
     fs::metadata(path).is_ok_and(|metadata| metadata.is_file())
 }
 
+fn uxml_settings(root: &str, schema_present: bool, user: Option<Value>) -> Value {
+    let root = root.trim_end_matches(['/', '\\']);
+    let schema_path = format!("{root}/UIElementsSchema/UIElements.xsd");
+    let no_grammar = if schema_present { "ignore" } else { "warning" };
+    let mut settings = json!({
+        "xml": {
+            "fileAssociations": [
+                { "pattern": "**/*.uxml", "systemId": schema_path }
+            ],
+            "validation": {
+                "enabled": !schema_present,
+                "schema": { "enabled": "always" },
+                "noGrammar": no_grammar
+            }
+        }
+    });
+
+    if !schema_present {
+        settings["xml"]["validation"]["namespaces"] = json!({ "enabled": "never" });
+    }
+
+    if let Some(Value::Object(user)) = user {
+        merge_value(&mut settings, Value::Object(user));
+    }
+
+    resolve_relative_paths(&mut settings, root);
+    settings
+}
+
+fn merge_value(base: &mut Value, overlay: Value) {
+    match (base, overlay) {
+        (Value::Object(base), Value::Object(overlay)) => {
+            for (key, value) in overlay {
+                match base.get_mut(&key) {
+                    Some(existing) => merge_value(existing, value),
+                    None => {
+                        base.insert(key, value);
+                    }
+                }
+            }
+        }
+        (base, overlay) => *base = overlay,
+    }
+}
+
+fn resolve_relative_paths(settings: &mut Value, root: &str) {
+    let Some(xml) = settings.get_mut("xml") else {
+        return;
+    };
+
+    if let Some(catalogs) = xml.get_mut("catalogs").and_then(Value::as_array_mut) {
+        for catalog in catalogs.iter_mut() {
+            let Some(path) = catalog.as_str() else {
+                continue;
+            };
+            let resolved = absolute_path(path, root);
+            *catalog = Value::String(resolved);
+        }
+    }
+
+    if let Some(associations) = xml
+        .get_mut("fileAssociations")
+        .and_then(Value::as_array_mut)
+    {
+        for association in associations.iter_mut() {
+            let Some(system_id) = association.get_mut("systemId") else {
+                continue;
+            };
+            let Some(path) = system_id.as_str() else {
+                continue;
+            };
+            let resolved = absolute_path(path, root);
+            *system_id = Value::String(resolved);
+        }
+    }
+}
+
+fn is_absolute(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    path.starts_with('/')
+        || path.starts_with('\\')
+        || has_uri_scheme(path)
+        || (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
+}
+
+fn has_uri_scheme(path: &str) -> bool {
+    let Some((scheme, _)) = path.split_once(':') else {
+        return false;
+    };
+    scheme.len() > 1
+        && scheme.starts_with(|character: char| character.is_ascii_alphabetic())
+        && scheme.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '+' | '-' | '.')
+        })
+}
+
+fn absolute_path(path: &str, root: &str) -> String {
+    if is_absolute(path) {
+        return path.to_string();
+    }
+    let root = root.trim_end_matches(['/', '\\']);
+    let relative = path.strip_prefix("./").unwrap_or(path);
+    format!("{root}/{relative}")
+}
+
+fn uxml_initialization_options(
+    user_initialization: Option<Value>,
+    root: &str,
+    schema_present: bool,
+    user_settings: Option<Value>,
+) -> Value {
+    let settings = uxml_settings(root, schema_present, user_settings);
+    let mut options = match user_initialization {
+        Some(Value::Object(options)) => Value::Object(options),
+        _ => Value::Object(Default::default()),
+    };
+    if let Value::Object(options) = &mut options {
+        options.entry("settings").or_insert(settings);
+    }
+    options
+}
+
 zed::register_extension!(UnityExtension);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zed_extension_api::serde_json::json;
 
     #[test]
     fn maps_supported_platforms_to_release_assets() {
@@ -571,5 +742,155 @@ c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2 *unity-asmdef-l
         let error = verify_sha256("abcdef", "abcdee").unwrap_err();
         assert!(error.contains("expected abcdef"), "{error}");
         assert!(error.contains("got abcdee"), "{error}");
+    }
+
+    #[test]
+    fn uxml_settings_disable_validation_by_default() {
+        let settings = uxml_settings("/project", true, None);
+        assert_eq!(
+            settings,
+            json!({
+                "xml": {
+                    "fileAssociations": [{
+                        "pattern": "**/*.uxml",
+                        "systemId": "/project/UIElementsSchema/UIElements.xsd"
+                    }],
+                    "validation": {
+                        "enabled": false,
+                        "schema": { "enabled": "always" },
+                        "noGrammar": "ignore"
+                    }
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn uxml_settings_surface_a_missing_schema() {
+        let settings = uxml_settings("/project", false, None);
+        assert_eq!(settings["xml"]["validation"]["enabled"], json!(true));
+        assert_eq!(settings["xml"]["validation"]["noGrammar"], json!("warning"));
+        assert_eq!(
+            settings["xml"]["validation"]["namespaces"]["enabled"],
+            json!("never")
+        );
+        assert_eq!(
+            settings["xml"]["fileAssociations"][0]["systemId"],
+            json!("/project/UIElementsSchema/UIElements.xsd")
+        );
+    }
+
+    #[test]
+    fn uxml_settings_merge_user_validation_without_losing_defaults() {
+        let settings = uxml_settings(
+            "/project",
+            true,
+            Some(json!({ "xml": { "validation": { "enabled": true } } })),
+        );
+        assert_eq!(settings["xml"]["validation"]["enabled"], json!(true));
+        assert_eq!(
+            settings["xml"]["validation"]["schema"]["enabled"],
+            json!("always")
+        );
+        assert_eq!(settings["xml"]["validation"]["noGrammar"], json!("ignore"));
+    }
+
+    #[test]
+    fn uxml_settings_replace_file_associations_and_resolve_paths() {
+        let settings = uxml_settings(
+            "/project/",
+            true,
+            Some(json!({
+                "xml": {
+                    "fileAssociations": [
+                        { "pattern": "**/UI/**/*.uxml", "systemId": "schemas/ui.xsd" }
+                    ],
+                    "catalogs": [
+                        "schemas/catalog.xml",
+                        "/absolute/catalog.xml",
+                        "https://example.com/catalog.xml"
+                    ]
+                }
+            })),
+        );
+        assert_eq!(
+            settings["xml"]["fileAssociations"],
+            json!([{
+                "pattern": "**/UI/**/*.uxml",
+                "systemId": "/project/schemas/ui.xsd"
+            }])
+        );
+        assert_eq!(
+            settings["xml"]["catalogs"],
+            json!([
+                "/project/schemas/catalog.xml",
+                "/absolute/catalog.xml",
+                "https://example.com/catalog.xml"
+            ])
+        );
+    }
+
+    #[test]
+    fn uxml_settings_resolve_a_windows_root() {
+        let settings = uxml_settings(
+            "C:\\project",
+            true,
+            Some(json!({
+                "xml": {
+                    "fileAssociations": [{
+                        "pattern": "**/*.uxml",
+                        "systemId": "UIElementsSchema/UIElements.xsd"
+                    }]
+                }
+            })),
+        );
+        assert_eq!(
+            settings["xml"]["fileAssociations"][0]["systemId"],
+            json!("C:\\project/UIElementsSchema/UIElements.xsd")
+        );
+    }
+
+    #[test]
+    fn uxml_initialization_options_wrap_settings() {
+        let settings = uxml_settings("/project", true, None);
+        assert_eq!(
+            uxml_initialization_options(None, "/project", true, None),
+            json!({ "settings": settings })
+        );
+    }
+
+    #[test]
+    fn uxml_initialization_options_preserve_user_options() {
+        let options = uxml_initialization_options(
+            Some(json!({ "extendedClientCapabilities": { "validate": true } })),
+            "/project",
+            true,
+            None,
+        );
+        assert_eq!(
+            options["extendedClientCapabilities"]["validate"],
+            json!(true)
+        );
+        assert!(options.get("settings").is_some());
+    }
+
+    #[test]
+    fn uxml_initialization_options_keep_user_settings_override() {
+        let user = json!({ "settings": { "xml": { "validation": { "enabled": false } } } });
+        assert_eq!(
+            uxml_initialization_options(Some(user.clone()), "/project", true, None),
+            user
+        );
+    }
+
+    #[test]
+    fn leaves_uris_and_absolute_paths_alone() {
+        for path in ["/x", "\\x", "file:///x", "https://example.com/x", "C:\\x"] {
+            assert_eq!(absolute_path(path, "/project"), path);
+        }
+        assert_eq!(
+            absolute_path("schemas/a.xsd", "/project/"),
+            "/project/schemas/a.xsd"
+        );
     }
 }
