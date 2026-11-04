@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""Set the Unity extension release version across the files that matter.
+
+Usage:
+    ./set_version 0.3.1
+    ./set_version v0.3.1
+    ./set_version 0.3.1 --bump-lsp
+    ./set_version 0.3.1 --dry-run
+
+The script updates:
+  - Cargo.toml                  extension crate version
+  - extension.toml              Zed registry version
+  - src/lib.rs                  LSP_TAG (must be v<extension-version>)
+  - Cargo.lock                  refreshed by `cargo check --workspace`
+
+The asmdef LSP crate version in lsp/Cargo.toml is independent. Pass --bump-lsp
+when the asmdef server itself changed, so its binary version matches the release.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+SEMVER = re.compile(r"^(?P<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$")
+
+
+def fail(message: str) -> int:
+    print(f"error: {message}", file=sys.stderr)
+    return 1
+
+
+def normalize_version(value: str) -> str:
+    value = value.strip()
+    if value.startswith("v"):
+        value = value[1:]
+    match = SEMVER.fullmatch(value)
+    if not match:
+        raise ValueError(
+            f"invalid version {value!r}; expected MAJOR.MINOR.PATCH, optionally prefixed with 'v'"
+        )
+    return match.group("version")
+
+
+def set_package_version(path: Path, version: str) -> None:
+    lines = path.read_text().splitlines(keepends=True)
+    in_package = False
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_package = stripped == "[package]"
+            continue
+        if not in_package:
+            continue
+        match = re.match(r'^(\s*version\s*=\s*")[^"]+(")', line)
+        if match:
+            lines[index] = (
+                match.group(1) + version + match.group(2) + line[match.end() :]
+            )
+            path.write_text("".join(lines))
+            return
+    raise ValueError(f"no [package] version found in {path}")
+
+
+def get_extension_version(path: Path) -> str:
+    for line in path.read_text().splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            break
+        match = re.match(r'^version\s*=\s*"([^"]+)"', stripped)
+        if match:
+            return match.group(1)
+    raise ValueError(f"no top-level version found in {path}")
+
+
+def set_extension_version(path: Path, version: str) -> None:
+    lines = path.read_text().splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            break
+        match = re.match(r'^(\s*version\s*=\s*")[^"]+(")', line)
+        if match:
+            lines[index] = (
+                match.group(1) + version + match.group(2) + line[match.end() :]
+            )
+            path.write_text("".join(lines))
+            return
+    raise ValueError(f"no top-level version found in {path}")
+
+
+def set_lsp_tag(path: Path, version: str) -> None:
+    text = path.read_text()
+    pattern = r'(const LSP_TAG: &str = ")[^"]+(";)'
+    matches = re.findall(pattern, text)
+    if len(matches) != 1:
+        raise ValueError(f"expected exactly one LSP_TAG in {path}, found {len(matches)}")
+    text = re.sub(
+        pattern,
+        lambda match: f"{match.group(1)}v{version}{match.group(2)}",
+        text,
+        count=1,
+    )
+    path.write_text(text)
+
+
+def git_is_dirty() -> bool:
+    if not is_git_repo():
+        return False
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return bool(result.stdout.strip())
+
+
+def is_git_repo() -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def relative(path: Path) -> str:
+    return str(path.relative_to(ROOT))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Set the Unity extension release version.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "The default updates Cargo.toml, extension.toml, src/lib.rs, and Cargo.lock.\n"
+            "lsp/Cargo.toml is only updated with --bump-lsp."
+        ),
+    )
+    parser.add_argument("version", help="new version, for example 0.3.1 or v0.3.1")
+    parser.add_argument(
+        "--bump-lsp",
+        action="store_true",
+        help="also set the unity-asmdef-lsp crate version in lsp/Cargo.toml",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print what would change without writing files or running cargo",
+    )
+    parser.add_argument(
+        "--no-lock",
+        action="store_true",
+        help="skip `cargo check --workspace` and leave Cargo.lock untouched",
+    )
+    args = parser.parse_args()
+
+    try:
+        version = normalize_version(args.version)
+    except ValueError as error:
+        return fail(str(error))
+
+    cargo_toml = ROOT / "Cargo.toml"
+    extension_toml = ROOT / "extension.toml"
+    lsp_cargo_toml = ROOT / "lsp/Cargo.toml"
+    lib_rs = ROOT / "src/lib.rs"
+    cargo_lock = ROOT / "Cargo.lock"
+
+    try:
+        old_version = get_extension_version(extension_toml)
+    except ValueError as error:
+        return fail(str(error))
+
+    if old_version == version:
+        print(f"Already at {version}; nothing to do.")
+        return 0
+
+    targets = [cargo_toml, extension_toml, lib_rs]
+    if args.bump_lsp:
+        targets.append(lsp_cargo_toml)
+
+    if args.dry_run:
+        print(f"Would set {old_version} -> {version}:")
+        for path in targets:
+            print(f"  {relative(path)}")
+        if not args.no_lock:
+            print(f"  {relative(cargo_lock)} (via cargo check --workspace)")
+        print(f"  LSP_TAG -> v{version}")
+        if not args.bump_lsp:
+            print("  lsp/Cargo.toml stays unchanged (pass --bump-lsp to update it)")
+        return 0
+
+    if git_is_dirty():
+        print(
+            "warning: working tree is not clean; the version bump will be mixed with "
+            "existing changes.",
+            file=sys.stderr,
+        )
+
+    originals = {path: path.read_text() for path in targets}
+    if cargo_lock.exists():
+        originals[cargo_lock] = cargo_lock.read_text()
+
+    try:
+        set_package_version(cargo_toml, version)
+        set_extension_version(extension_toml, version)
+        set_lsp_tag(lib_rs, version)
+        if args.bump_lsp:
+            set_package_version(lsp_cargo_toml, version)
+        if not args.no_lock:
+            subprocess.run(
+                ["cargo", "check", "--workspace"],
+                cwd=ROOT,
+                check=True,
+            )
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        for path, text in originals.items():
+            path.write_text(text)
+        return fail(f"{error}; restored the version files")
+
+    print(f"Set version {old_version} -> {version}.")
+    for path in targets:
+        print(f"  updated {relative(path)}")
+    if not args.no_lock:
+        print(f"  refreshed {relative(cargo_lock)}")
+    if not args.bump_lsp:
+        print("  lsp/Cargo.toml unchanged (pass --bump-lsp to update it)")
+
+    if is_git_repo():
+        subprocess.run(["git", "diff", "--stat"], cwd=ROOT, check=False)
+
+    add_files = "Cargo.toml Cargo.lock extension.toml src/lib.rs"
+    if args.bump_lsp:
+        add_files += " lsp/Cargo.toml"
+    print()
+    print("Next steps:")
+    print("  cargo test -p unity asmdef_release_tag_matches_extension_version")
+    print(f"  git add {add_files}")
+    print(f'  git commit -m "chore: release {version}"')
+    print(f"  git tag v{version}")
+    print(f"  git push origin main v{version}")
+    print(
+        "  Review PUBLISHING.md, README.md, and ROADMAP.md for current-release "
+        "references."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

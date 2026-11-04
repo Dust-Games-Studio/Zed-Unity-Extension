@@ -169,8 +169,9 @@ Update the "pending" note in the README installation section at that point.
 
 ## Updating an already published extension
 
-1. Bump `version` in `extension.toml` and `Cargo.toml`, and set `LSP_TAG` in `src/lib.rs`
-   to `v<version>`. Bump `lsp/Cargo.toml` only when the asmdef server changes.
+1. Run `./set_version <version>` from the repository root. It updates `Cargo.toml`,
+   `extension.toml`, `src/lib.rs`, and `Cargo.lock`. Add `--bump-lsp` when the asmdef
+   server changed.
 2. Commit and push `main`.
 3. Push the `v<version>` tag. The release workflow builds and attaches the asmdef LSP
    assets plus `SHA256SUMS` to that release.
