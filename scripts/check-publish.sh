@@ -328,6 +328,77 @@ if declared_snippets:
 
 tracked = tracked_files()
 tracked_set = set(tracked)
+
+rust_sources = [path for path in tracked if path.endswith(".rs")]
+if rust_sources:
+    lib_table = manifest.get("lib")
+    if not isinstance(lib_table, dict) or lib_table.get("kind") != "Rust":
+        err("extension.toml must declare [lib] kind = \"Rust\" when Rust source is tracked")
+    else:
+        ok("extension.toml declares a Rust extension library")
+
+    servers = manifest.get("language_servers", {})
+    if not isinstance(servers, dict) or not servers:
+        err("Rust extension must declare at least one [language_servers] entry")
+    else:
+        ok(f"{len(servers)} language server(s) declared")
+        forbidden_languages = {"CSharp", "Unity UXML", "Unity USS"}
+        for server_name, server in servers.items():
+            if not isinstance(server, dict):
+                err(f"language server '{server_name}' must be a table")
+                continue
+            languages = server.get("languages")
+            if languages is None and isinstance(server.get("language"), str):
+                languages = [server["language"]]
+            if not isinstance(languages, list) or not languages:
+                err(f"language server '{server_name}' must declare languages")
+                continue
+            unknown = [language for language in languages if language not in seen_language_names]
+            if unknown:
+                err(
+                    f"language server '{server_name}' references unknown language(s): "
+                    + ", ".join(unknown)
+                )
+            forbidden = sorted(forbidden_languages.intersection(languages))
+            if forbidden:
+                err(
+                    f"language server '{server_name}' must not attach to: "
+                    + ", ".join(forbidden)
+                )
+
+    cargo_path = root / "Cargo.toml"
+    if not cargo_path.is_file():
+        err("Cargo.toml is required when Rust source is tracked")
+    else:
+        try:
+            cargo = load_toml(cargo_path)
+            ok("Cargo.toml parses")
+        except Exception as exc:  # noqa: BLE001 - report the parser error verbatim
+            cargo = {}
+            err(f"Cargo.toml does not parse: {exc}")
+        lib = cargo.get("lib", {}) if isinstance(cargo, dict) else {}
+        crate_type = lib.get("crate-type", []) if isinstance(lib, dict) else []
+        if "cdylib" not in crate_type:
+            err("Cargo.toml [lib] must include crate-type = [\"cdylib\"]")
+        else:
+            ok("Cargo.toml builds a cdylib extension")
+        workspace = cargo.get("workspace", {}) if isinstance(cargo, dict) else {}
+        members = workspace.get("members", []) if isinstance(workspace, dict) else []
+        if "lsp" not in members:
+            err("Cargo.toml [workspace] must include lsp")
+        else:
+            ok("Cargo workspace includes the LSP crate")
+
+    for required in ("src/lib.rs", "lsp/Cargo.toml", "lsp/src/main.rs"):
+        if not (root / required).is_file():
+            err(f"{required} is required for the Rust extension")
+        elif required not in tracked_set:
+            err(f"{required} exists but is not tracked in git")
+    if "Cargo.lock" not in tracked_set:
+        err("Cargo.lock must be tracked for reproducible builds")
+    else:
+        ok("Cargo.lock is tracked")
+
 for relative_path in sorted(declared_snippets):
     if relative_path not in tracked_set:
         err(f"registered snippet file is not tracked in git: {relative_path}")
@@ -345,19 +416,55 @@ if tracked_snippets:
     else:
         ok("all tracked snippet files are registered")
 
+binary_suffixes = (
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".wasm",
+    ".zip",
+    ".tar.gz",
+    ".gz",
+)
+binary_magics = (
+    b"\x7fELF",
+    b"\0asm",
+    b"MZ",
+    b"\xfe\xed\xfa\xce",
+    b"\xce\xfa\xed\xfe",
+    b"\xfe\xed\xfa\xcf",
+    b"\xcf\xfa\xed\xfe",
+    b"\xca\xfe\xba\xbe",
+)
+fixture_placeholder_dlls = {
+    path
+    for path in tracked
+    if path.startswith("tests/fixtures/lsp-project/") and path.endswith(".dll")
+}
+
 for path in tracked:
     if path.startswith("csharp-main/"):
         err("csharp-main/ is tracked; remove the Rust reference checkout from the publishable tree")
-    if path.endswith(".rs"):
-        err(f"tracked Rust source is not allowed in a declarative extension: {path}")
-    if path in ("Cargo.toml", "Cargo.lock"):
-        err(f"tracked Rust manifest is not allowed: {path}")
-    if path.startswith("src/"):
-        err(f"tracked src/ directory is not allowed in a declarative extension: {path}")
+    if path.startswith("target/") or path.startswith("lsp/target/"):
+        err(f"build output is tracked: {path}")
     if path.startswith("tests/.grammars/"):
         err("tests/.grammars/ is a local cache and must not be tracked")
     if path.startswith(".superpowers/"):
         err(".superpowers/ is local review scaffolding and must not be tracked")
+    if path.rsplit("/", 1)[-1] in ("unity-asmdef-lsp", "unity-asmdef-lsp.exe"):
+        err(f"the language server binary must not be bundled: {path}")
+    if path.endswith(binary_suffixes) and path not in fixture_placeholder_dlls:
+        err(f"tracked binary artifact: {path}")
+    candidate = root / path
+    if candidate.is_file() and path not in fixture_placeholder_dlls:
+        try:
+            head = candidate.read_bytes()[:4]
+        except OSError:
+            continue
+        if candidate.stat().st_size < 16 * 1024 * 1024 and any(
+            head.startswith(magic) for magic in binary_magics
+        ):
+            err(f"tracked file looks like a native binary: {path}")
 
 status = git("status", "--porcelain")
 if status.returncode != 0:

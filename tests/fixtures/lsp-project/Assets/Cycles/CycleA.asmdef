@@ -1,0 +1,6 @@
+{
+  "name": "Cycle.A",
+  "references": [
+    "Cycle.B"
+  ]
+}

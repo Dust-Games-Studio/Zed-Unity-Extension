@@ -1,0 +1,10 @@
+{
+  "name": "Game.Editor",
+  "references": [
+    "Game.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": []
+}

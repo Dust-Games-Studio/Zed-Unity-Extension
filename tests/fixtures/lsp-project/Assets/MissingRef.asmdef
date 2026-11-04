@@ -1,0 +1,6 @@
+{
+  "name": "Missing.Ref",
+  "references": [
+    "Does.Not.Exist"
+  ]
+}

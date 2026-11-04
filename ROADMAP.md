@@ -4,19 +4,23 @@ Last updated: 2026-11-02
 
 ## Current state
 
-`0.1.0` is a declarative Zed extension:
+`0.2.0` is a Rust Zed extension with a native assembly-definition language server:
 
 - Five languages: Unity Assembly Definition, Unity YAML, Unity UXML, Unity USS,
   Unity ShaderLab.
 - Pinned Tree-sitter grammars, highlighting, outlines, brackets, indentation, and
   ShaderLab injections.
 - Five Unity CLI tasks and 101 Unity C# snippets.
+- `unity-asmdef-lsp`: project-aware completion, diagnostics, and go-to-definition
+  for `.asmdef`/`.asmref`, including read-only package assemblies.
 - Preflight and publish documentation in [PUBLISHING.md](PUBLISHING.md).
 
-This release has **no semantic completion**. Zed only provides dynamic completion
-through a language server; a declarative extension cannot compute project-specific
-values such as "other assemblies" in an `.asmdef` or the available children of a
-UXML element.
+`0.1.0` was the declarative release. UXML/USS completion and C#-aware UXML were
+intentionally deferred; `0.2.0` does not attach a language server to C#, UXML, or USS.
+
+Zed only provides dynamic completion through a language server; a declarative
+extension cannot compute project-specific values such as "other assemblies" in an
+`.asmdef` or the available children of a UXML element.
 
 ## The decision to make
 
@@ -34,8 +38,9 @@ not a patch to `0.1.0`.
 existing servers where possible. Add C only for features that genuinely need the
 Unity Editor.
 
-Publish `0.1.0` first. Start completion work as `0.2.0` so the language release is
-not blocked by server distribution and platform testing.
+`0.1.0` shipped first. `0.2.0` implements option B for assembly definitions with a
+custom server; package assemblies are read-only completion/definition sources and the
+rest of `Library/` is never scanned.
 
 ## What can be reused
 
@@ -105,6 +110,8 @@ Unity project.
 
 ### Phase 3 — `.asmdef` language server MVP
 
+**Status: implemented in `0.2.0`.**
+
 **Goal:** Complete "other assemblies" and the rest of the asmdef schema.
 
 This has no reusable server; build a small LSP. Keep it a separate binary release
@@ -127,10 +134,24 @@ MVP features:
 Distribution: platform-specific binaries on GitHub Releases with SHA-256 checksums;
 the extension downloads the matching binary. Do not bundle it in the extension.
 
+Implemented behavior:
+
+- Project and package assembly completion, including `GUID:` forms.
+- Platform, package-name, DLL, and schema-key completion.
+- Strict JSON and schema diagnostics, including malformed asmdef files.
+- Unresolved references, duplicate names, cycles, and missing asmref targets.
+- Go-to-definition and server-side file watching.
+- Read-only package assemblies from `Packages/` and lockfile-selected
+  `Library/PackageCache/` directories.
+- Local binary override and PATH resolution.
+- `--check <project>` for CI and manual index/diagnostic inspection.
+
 **Exit:** completion and diagnostics for the asmdef fixture set and a real Unity
 project, with cross-platform release artifacts.
 
 ### Phase 4 — USS completion
+
+**Status: deferred.** The current request explicitly excludes UXML and USS servers.
 
 **Goal:** Complete USS properties, values, selectors, and asset URLs.
 
@@ -149,6 +170,9 @@ Decide whether formatting/rename are in scope or deferred.
 the built-in CSS language server on `.css` files.
 
 ### Phase 5 — C#-aware UXML (research spike)
+
+**Status: aborted for this release.** The UXML-to-C# data bridge was explicitly
+excluded from the current scope.
 
 **Goal:** Decide how to complete `binding-path`, `data-source-type`, serialized
 fields, USS class names, and custom attributes that are not in the XSD.
@@ -187,13 +211,14 @@ the chosen path.
 ## Open questions
 
 1. Ship `0.1.0` before adding Rust, or hold the release for Phase 1?
-   Recommendation: ship `0.1.0` now.
-2. One extension or a separate language-server extension? Recommendation: one.
+   Resolved: `0.1.0` shipped first; `0.2.0` adds Rust and the asmdef server.
+2. One extension or a separate language-server extension? Resolved: one.
 3. For USS, wait for `unity_code_native` releases or build a small server?
+   Still open; USS is out of scope for `0.2.0`.
 4. Is a static UXML fallback schema acceptable when Unity has not generated
-   `UIElementsSchema`?
+   `UIElementsSchema`? Still open; UXML is out of scope for `0.2.0`.
 5. Is C#-aware UXML worth a Unity Editor companion package, or is XSD completion
-   enough for v1?
+   enough for v1? Deferred; the UXML-to-C# bridge was excluded from the current scope.
 
 ## Success criteria
 

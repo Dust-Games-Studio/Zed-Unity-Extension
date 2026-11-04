@@ -68,3 +68,5 @@
         key: (string (string_content) @_vk3)
         (#eq? @_vk3 "define")
         value: (string (string_content) @constant)))))
+
+(ERROR) @error

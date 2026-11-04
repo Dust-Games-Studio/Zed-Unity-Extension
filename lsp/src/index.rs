@@ -638,6 +638,78 @@ mod tests {
     }
 
     #[test]
+    fn committed_fixture_covers_lsp_cases() {
+        let root = normalize_path(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/lsp-project"),
+        );
+        let index = build(std::slice::from_ref(&root), &HashMap::new());
+        assert_eq!(index.projects.len(), 1);
+        let project = &index.projects[0];
+
+        for name in [
+            "Game.Runtime",
+            "Game.Editor",
+            "Shared",
+            "Unity.InputSystem",
+            "Cycle.A",
+            "Cycle.B",
+            "Duplicate",
+            "Missing.Ref",
+            "Bom.Assembly",
+        ] {
+            assert!(
+                !project.find_by_name(name).is_empty(),
+                "fixture is missing {name}"
+            );
+        }
+        assert!(project.find_by_name("Unity.InputSystem")[0].external);
+        assert!(project
+            .dlls
+            .iter()
+            .any(|dll| dll.name == "Newtonsoft.Json.dll"));
+        assert!(project
+            .packages
+            .iter()
+            .any(|package| package.name == "com.unity.inputsystem"));
+
+        let broken = project
+            .file(&normalize_path(&root.join("Assets/Broken/Broken.asmdef")))
+            .expect("broken fixture");
+        assert!(broken
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "asmdef.parse-error"));
+
+        let diagnostics = crate::diagnostics::compute(&index);
+        let codes_for = |path: &Path| -> Vec<String> {
+            let url = tower_lsp::lsp_types::Url::from_file_path(path).unwrap();
+            diagnostics
+                .get(&url)
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|item| match &item.code {
+                            Some(tower_lsp::lsp_types::NumberOrString::String(code)) => {
+                                Some(code.clone())
+                            }
+                            _ => None,
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+
+        assert!(codes_for(&root.join("Assets/Cycles/CycleA.asmdef"))
+            .contains(&"asmdef.reference-cycle".to_string()));
+        assert!(codes_for(&root.join("Assets/Duplicates/Duplicate1.asmdef"))
+            .contains(&"asmdef.duplicate-name".to_string()));
+        assert!(codes_for(&root.join("Assets/MissingRef.asmdef"))
+            .contains(&"asmdef.unresolved-reference".to_string()));
+        assert!(codes_for(&root.join("Assets/Refs/ByGuid.asmref")).is_empty());
+        assert!(codes_for(&root.join("Assets/Bom.asmdef")).is_empty());
+    }
+
+    #[test]
     fn falls_back_to_workspace_root_without_project_marker() {
         let temp = tempfile::tempdir().unwrap();
         write(

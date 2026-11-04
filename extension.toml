@@ -2,15 +2,11 @@ id = "unity"
 name = "Unity"
 version = "0.2.0"
 schema_version = 1
-capabilities = []
-
-[lib]
-kind = "Rust"
-version = "0.7.0"
 authors = ["Dust Games Studio"]
 license = "MIT"
-description = "Unity file format support: assembly definitions, Unity YAML assets, UI Toolkit UXML/USS, and ShaderLab."
+description = "Unity file format support with an assembly definition language server, Unity YAML, UI Toolkit UXML/USS, and ShaderLab."
 repository = "https://github.com/Dust-Games-Studio/Zed-Unity-Extension"
+capabilities = []
 
 # Zed compiles each grammar with `--export=tree_sitter_<grammar key>`, so the key
 # must match the parser symbol exported by the upstream grammar.
@@ -27,6 +23,10 @@ snippets = [
     "snippets/physics/csharp.json",
     "snippets/rendering/csharp.json",
 ]
+
+[lib]
+kind = "Rust"
+version = "0.7.0"
 
 [grammars.json]
 repository = "https://github.com/tree-sitter/tree-sitter-json"

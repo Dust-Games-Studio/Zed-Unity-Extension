@@ -11,7 +11,9 @@ This document is the release checklist for submitting the extension to the
 | Registry submodule | `extensions/unity` |
 | Repository | `https://github.com/Dust-Games-Studio/Zed-Unity-Extension` |
 | License | MIT, at the repository root |
-| Version | `0.1.0` in `extension.toml` |
+| Version | `0.2.0` in `extension.toml` |
+| Rust extension | `Cargo.toml`, `src/`, and the `lsp/` workspace member |
+| Bundled binaries | None; `unity-asmdef-lsp` is downloaded from a GitHub release at runtime |
 
 The ID `unity` is not used by another extension in `zed-industries/extensions`.
 `unity-debugger` and `unity-snippets` are separate IDs.
@@ -21,29 +23,64 @@ The ID `unity` is not used by another extension in `zed-industries/extensions`.
 Run these from the repository root:
 
 ```bash
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo build --release -p unity-asmdef-lsp
+cargo build --target wasm32-wasip2 --release
 ./scripts/validate.sh all
 ./scripts/check-publish.sh --strict
 ```
 
 `validate.sh` checks the grammars, fixtures, language configs, and queries.
 `check-publish.sh` checks the registry prerequisites: manifest fields, license,
-grammar pins, language directories, tasks files, and the tracked file tree. It
-also prints the exact `[unity]` entry for the registry PR.
+grammar pins, language directories, tasks files, Rust extension structure, and the
+tracked file tree. It also rejects bundled native binaries and prints the exact
+`[unity]` entry for the registry PR.
 
 Then complete the manual Zed check at the exact commit you will submit:
 
 1. Run `zed: install dev extension` and select this repository.
 2. Open each file in `tests/fixtures/` and confirm the language mode, highlighting,
    outline, comments, brackets, and indentation.
-3. Confirm `.cs` still uses the official C# extension.
-4. Run `task: spawn` from a Unity file and confirm all five Unity tasks appear.
-5. Run `zed: open log` and confirm there are no grammar, query, or language
-   registration errors.
-6. Confirm `@error` is visible in your theme for the invalid UXML/USS fixtures.
+3. Open an `.asmdef`, trigger completion in `references`, and confirm project and package
+   assembly names and `GUID:` forms appear.
+4. Use go-to-definition on a reference and confirm it opens the target assembly.
+5. Open `tests/fixtures/lsp-project/Assets/Broken/Broken.asmdef` and confirm the parse
+   diagnostic; confirm malformed asmdef syntax also highlights as an error.
+6. Confirm `.cs` still uses the official C# extension and no second C# server starts.
+7. Run `task: spawn` from a Unity file and confirm all five Unity tasks appear.
+8. Run `zed: open log` and confirm there are no grammar, query, language registration,
+   or server startup errors.
+9. Confirm `@error` is visible in your theme for the invalid UXML/USS fixtures.
 
 Do not submit until `main` is clean, pushed, and the checked-out commit is on a
 branch. The registry uses the checked-out submodule commit, and detached commits
 are rejected.
+
+### Language server distribution
+
+The registry permits a Rust extension that provides language servers. It must not
+bundle the server binary. This repository keeps `unity-asmdef-lsp` in the `lsp/`
+workspace member and downloads a pinned release at runtime.
+
+Publish the server first, using a tag matching the version in `src/lib.rs`:
+
+```text
+unity-asmdef-lsp-v0.2.0
+```
+
+The release workflow builds these assets and generates `SHA256SUMS`:
+
+- `unity-asmdef-lsp-linux-x86_64`
+- `unity-asmdef-lsp-linux-aarch64`
+- `unity-asmdef-lsp-macos-x86_64`
+- `unity-asmdef-lsp-macos-aarch64`
+- `unity-asmdef-lsp-windows-x86_64.exe`
+
+The extension verifies the downloaded binary against `SHA256SUMS` before marking it
+executable. Users can always bypass the download with `lsp.unity-asmdef.binary.path`
+or a `unity-asmdef-lsp` binary on `PATH`.
 
 ### Snippets
 
@@ -106,17 +143,19 @@ Update the "pending" note in the README installation section at that point.
 
 ## Updating an already published extension
 
-1. Bump `version` in `extension.toml` and commit the release to `main`.
-2. Push `main` to the public repository.
-3. In your `zed-industries/extensions` fork:
+1. Bump `version` in `extension.toml`, `Cargo.toml`, and `lsp/Cargo.toml`; update the
+   pinned `LSP_TAG` in `src/lib.rs`; commit the release to `main`.
+2. Push the `unity-asmdef-lsp-v<version>` tag so the server release is published.
+3. Push `main` to the public repository.
+4. In your `zed-industries/extensions` fork:
 
    ```bash
    git submodule update --remote extensions/unity
    ```
 
-4. Update the `version` in the registry's `extensions.toml` to match the new
+5. Update the `version` in the registry's `extensions.toml` to match the new
    `extension.toml`.
-5. Run `pnpm sort-extensions`, commit, push, and open a PR.
+6. Run `pnpm sort-extensions`, commit, push, and open a PR.
 
 Update PRs follow the same rules as the initial submission.
 

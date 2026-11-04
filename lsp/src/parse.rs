@@ -104,9 +104,15 @@ pub fn parse_file(path: &Path, text: &str) -> ParsedFile {
         Some("asmref") => FileKind::Asmref,
         _ => FileKind::Asmdef,
     };
+    // Unity sometimes writes a UTF-8 BOM. Parse the document without it, then
+    // shift every byte range back so diagnostics still point at the real file.
+    let (parse_text, base_offset) = match text.strip_prefix('\u{feff}') {
+        Some(stripped) => (stripped, text.len() - stripped.len()),
+        None => (text, 0),
+    };
     let mut diagnostics = Vec::new();
 
-    let parsed = match parse_to_ast(text, &CollectOptions::default(), &strict_options()) {
+    let parsed = match parse_to_ast(parse_text, &CollectOptions::default(), &strict_options()) {
         Ok(parsed) => parsed,
         Err(error) => {
             diagnostics.push(RawDiagnostic::error(
@@ -114,13 +120,16 @@ pub fn parse_file(path: &Path, text: &str) -> ParsedFile {
                 "asmdef.parse-error",
                 format!("Invalid JSON: {}", error.kind()),
             ));
-            return ParsedFile {
-                kind,
-                asmdef: None,
-                asmref: None,
-                diagnostics,
-                valid_json: false,
-            };
+            return finish(
+                ParsedFile {
+                    kind,
+                    asmdef: None,
+                    asmref: None,
+                    diagnostics,
+                    valid_json: false,
+                },
+                base_offset,
+            );
         }
     };
 
@@ -130,13 +139,16 @@ pub fn parse_file(path: &Path, text: &str) -> ParsedFile {
             "asmdef.parse-error",
             "JSON document is empty.",
         ));
-        return ParsedFile {
-            kind,
-            asmdef: None,
-            asmref: None,
-            diagnostics,
-            valid_json: false,
-        };
+        return finish(
+            ParsedFile {
+                kind,
+                asmdef: None,
+                asmref: None,
+                diagnostics,
+                valid_json: false,
+            },
+            base_offset,
+        );
     };
 
     let Some(object) = value.as_object() else {
@@ -145,32 +157,83 @@ pub fn parse_file(path: &Path, text: &str) -> ParsedFile {
             "asmdef.root-not-object",
             "The root value must be a JSON object.",
         ));
-        return ParsedFile {
-            kind,
-            asmdef: None,
-            asmref: None,
-            diagnostics,
-            valid_json: true,
-        };
+        return finish(
+            ParsedFile {
+                kind,
+                asmdef: None,
+                asmref: None,
+                diagnostics,
+                valid_json: true,
+            },
+            base_offset,
+        );
     };
 
     let (asmdef, asmref) = match kind {
         FileKind::Asmdef => (
-            Some(parse_asmdef_object(object, text, &mut diagnostics)),
+            Some(parse_asmdef_object(object, parse_text, &mut diagnostics)),
             None,
         ),
         FileKind::Asmref => (
             None,
-            Some(parse_asmref_object(object, text, &mut diagnostics)),
+            Some(parse_asmref_object(object, parse_text, &mut diagnostics)),
         ),
     };
 
-    ParsedFile {
-        kind,
-        asmdef,
-        asmref,
-        diagnostics,
-        valid_json: true,
+    finish(
+        ParsedFile {
+            kind,
+            asmdef,
+            asmref,
+            diagnostics,
+            valid_json: true,
+        },
+        base_offset,
+    )
+}
+
+fn finish(mut parsed: ParsedFile, base_offset: usize) -> ParsedFile {
+    if base_offset > 0 {
+        for diagnostic in &mut parsed.diagnostics {
+            shift_range(&mut diagnostic.range, base_offset);
+        }
+        if let Some(asmdef) = &mut parsed.asmdef {
+            shift_spanned_option(&mut asmdef.name, base_offset);
+            shift_spanned_option(&mut asmdef.root_namespace, base_offset);
+            for value in asmdef
+                .references
+                .iter_mut()
+                .chain(asmdef.include_platforms.iter_mut())
+                .chain(asmdef.exclude_platforms.iter_mut())
+                .chain(asmdef.precompiled_references.iter_mut())
+            {
+                shift_spanned(value, base_offset);
+            }
+            for version_define in &mut asmdef.version_defines {
+                shift_spanned_option(&mut version_define.name, base_offset);
+                shift_spanned_option(&mut version_define.expression, base_offset);
+                shift_spanned_option(&mut version_define.define, base_offset);
+            }
+        }
+        if let Some(asmref) = &mut parsed.asmref {
+            shift_spanned_option(&mut asmref.reference, base_offset);
+        }
+    }
+    parsed
+}
+
+fn shift_range(range: &mut TextRange, base_offset: usize) {
+    range.start += base_offset;
+    range.end += base_offset;
+}
+
+fn shift_spanned(value: &mut SpannedString, base_offset: usize) {
+    shift_range(&mut value.range, base_offset);
+}
+
+fn shift_spanned_option(value: &mut Option<SpannedString>, base_offset: usize) {
+    if let Some(value) = value {
+        shift_spanned(value, base_offset);
     }
 }
 
@@ -447,17 +510,7 @@ fn required_version_define_field(
 ) -> Option<SpannedString> {
     match object.get(key) {
         Some(property) => match &property.value {
-            Value::StringLit(literal) => {
-                let value = spanned_string(literal, text);
-                if value.value.is_empty() {
-                    diagnostics.push(RawDiagnostic::error(
-                        value.range,
-                        "asmdef.invalid-version-define",
-                        format!("`versionDefines.{key}` must not be empty."),
-                    ));
-                }
-                Some(value)
-            }
+            Value::StringLit(literal) => Some(spanned_string(literal, text)),
             other => {
                 diagnostics.push(RawDiagnostic::error(
                     raw_range(other.range()),
@@ -592,6 +645,25 @@ mod tests {
     fn reports_root_not_object() {
         let parsed = parse_asmdef(r#"["Game"]"#);
         assert_eq!(codes(&parsed), vec!["asmdef.root-not-object"]);
+    }
+
+    #[test]
+    fn accepts_a_utf8_bom_and_keeps_ranges_aligned() {
+        let text = "\u{feff}{\"name\":\"Game\"}";
+        let parsed = parse_asmdef(text);
+        assert!(parsed.valid_json);
+        assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+        let name = parsed.asmdef.unwrap().name.unwrap();
+        assert_eq!(&text[name.range.start..name.range.end], "Game");
+    }
+
+    #[test]
+    fn accepts_empty_version_define_values() {
+        let parsed = parse_asmdef(
+            r#"{ "name": "Game", "versionDefines": [{ "name": "Unity", "expression": "", "define": "X" }] }"#,
+        );
+        assert!(parsed.valid_json);
+        assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
     }
 
     #[test]
