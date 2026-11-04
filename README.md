@@ -23,6 +23,8 @@ by Zed's official C# extension.
   lists, define constraints, and version defines.
 - Project-aware completion, diagnostics, and go-to-definition for `.asmdef` and
   `.asmref` files through `unity-asmdef-lsp`.
+- Unity UXML tag, attribute, and enum completion from LemMinX using the project's
+  generated `UIElementsSchema/UIElements.xsd`; schema validation is opt-in.
 - Unity YAML highlighting for `!u!` class tags, anchors, `%YAML`/`%TAG` directives,
   `m_*` keys, 32-hex GUIDs, and `fileID` values.
 - Outlines for assembly fields, serialized objects and `m_Name`, UXML elements, USS rule
@@ -264,8 +266,11 @@ files. A companion Unity Editor package or a language server using
 
 ## UI Toolkit notes
 
-UXML and USS support is syntax highlighting, not validation. Unity parses these files on
-import and reports problems in the Console.
+UXML completion for tags, attributes, and enum values is provided by LemMinX using the
+project's generated `UIElementsSchema/UIElements.xsd`. UXML schema validation is opt-in
+through `lsp.unity-uxml.settings` and is off by default. USS remains syntax highlighting
+only; it has no language server and no validation. Unity parses these files on import and
+reports problems in the Console.
 
 USS is a subset of CSS. It does not support `gap`, `z-index`, `outline`, `box-shadow`,
 `filter`, `pointer-events`, attribute selectors, `:first-child`, `:last-child`,
@@ -397,9 +402,10 @@ Manual Zed check:
 
 ## Future work
 
-See [ROADMAP.md](ROADMAP.md) for the remaining semantic-completion plan (UXML, USS, and
+See [ROADMAP.md](ROADMAP.md) for the remaining semantic-completion plan (USS and
 C#-aware features). Assembly definition completion, diagnostics, definitions, references,
-rename, hover, quick fixes, and workspace symbols are implemented in `0.2.1`.
+rename, hover, quick fixes, and workspace symbols are implemented in `0.2.1`; UXML
+completion ships in `0.3.0`.
 
 - `.meta` automation requires a Unity Editor package or a language server using
   `workspace/willRenameFiles`; it is not part of this extension.

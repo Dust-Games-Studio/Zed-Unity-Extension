@@ -82,7 +82,7 @@ reference it with `xsi:noNamespaceSchemaLocation`.
   diagnostics.
 - Check Unity 2022.3 and Unity 6 projects, including a project without a generated
   schema.
-- Record the result and decide whether a static fallback schema is needed.
+- Record the decision: no static fallback schema.
 
 **Exit:** a short findings note with screenshots or capture output. No extension
 changes yet.
@@ -118,7 +118,8 @@ behavior is unchanged.
 - Do not bundle a static schema. If Unity has not generated
   `UIElementsSchema/UIElements.xsd`, start without Unity completion, report the missing
   file, and recover when Unity generates it.
-- Document the schema-generation step and the fallback.
+- Document the schema-generation step and the missing-schema behavior (no bundled or
+  generated fallback schema).
 - Test against Unity 2022.3, Unity 6, and a project with custom `UxmlFactory`
   elements.
 - Keep LemMinX schema diagnostics off by default and expose them through
@@ -180,7 +181,7 @@ Unity project, with cross-platform release artifacts.
 
 ### Phase 4 — USS completion
 
-**Status: deferred.** The current request explicitly excludes UXML and USS servers.
+**Status: deferred.** USS completion is deferred; UXML completion shipped in `0.3.0`.
 
 **Goal:** Complete USS properties, values, selectors, and asset URLs.
 
@@ -245,7 +246,8 @@ the chosen path.
 3. For USS, wait for `unity_code_native` releases or build a small server?
    Still open; USS is out of scope for `0.2.x`.
 4. Is a static UXML fallback schema acceptable when Unity has not generated
-   `UIElementsSchema`? Still open; UXML is out of scope for `0.2.x`.
+   `UIElementsSchema`? Resolved: no static fallback schema; the missing-schema behavior
+   is documented in the `0.3.0` design.
 5. Is C#-aware UXML worth a Unity Editor companion package, or is XSD completion
    enough for v1? Deferred; the UXML-to-C# bridge was excluded from the current scope.
 
