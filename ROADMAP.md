@@ -4,7 +4,8 @@ Last updated: 2026-11-04
 
 ## Current state
 
-`0.2.1` is a Rust Zed extension with a native assembly-definition language server:
+`0.3.0` is a Rust Zed extension with native language servers for assembly definitions and
+UI Toolkit UXML:
 
 - Five languages: Unity Assembly Definition, Unity YAML, Unity UXML, Unity USS,
   Unity ShaderLab.
@@ -14,14 +15,17 @@ Last updated: 2026-11-04
 - `unity-asmdef-lsp`: project-aware completion, diagnostics, go-to-definition,
   find-references, rename, hover, quick fixes, and workspace symbols for
   `.asmdef`/`.asmref`, including read-only package assemblies.
+- `unity-uxml`: LemMinX-backed tag, attribute, and enum completion for `.uxml`, using
+  Unity's generated `UIElementsSchema/UIElements.xsd`; validation is opt-in.
 - Preflight and publish documentation in [PUBLISHING.md](PUBLISHING.md).
 
-`0.2.1` adds the navigation and refactoring layer on top of the `0.2.0` server:
-find-references across assembly files, rename across declarations and name-based
-references, assembly hover, reference quick fixes, and project symbols.
+`0.3.0` adds UXML completion through LemMinX. `0.2.1` added the navigation and
+refactoring layer on top of the `0.2.0` asmdef server: find-references across assembly
+files, rename across declarations and name-based references, assembly hover, reference
+quick fixes, and project symbols.
 
-`0.1.0` was the declarative release. UXML/USS completion and C#-aware UXML were
-intentionally deferred; `0.2.x` does not attach a language server to C#, UXML, or USS.
+`0.1.0` was the declarative release. USS completion and C#-aware UXML remain deferred;
+`0.3.0` attaches a language server to UXML only.
 
 Zed only provides dynamic completion through a language server; a declarative
 extension cannot compute project-specific values such as "other assemblies" in an
@@ -67,6 +71,9 @@ reference it with `xsi:noNamespaceSchemaLocation`.
 
 ### Phase 0 — UXML/LemMinX spike
 
+**Status: complete (2026-11-04).** Findings are in
+`docs/superpowers/specs/2026-11-04-uxml-lemminx-design.md`.
+
 **Goal:** Prove that LemMinX gives useful completion on a real Unity project.
 
 - Run the existing `zed-xml` extension's LemMinX binary against a Unity project.
@@ -81,6 +88,8 @@ reference it with `xsi:noNamespaceSchemaLocation`.
 changes yet.
 
 ### Phase 1 — Rust/LSP foundation
+
+**Status: implemented in `0.2.0` and extended in `0.3.0`.**
 
 **Goal:** Make this repository a Rust extension that can launch language servers
 without breaking the declarative language support.
@@ -100,16 +109,20 @@ behavior is unchanged.
 
 ### Phase 2 — UXML completion and validation
 
+**Status: implemented in `0.3.0`; validation is opt-in.**
+
 **Goal:** Ship Rider-like UXML editing.
 
 - Default `.uxml` files to `UIElementsSchema/UIElements.xsd`.
 - Support custom elements and attributes from the project's generated schema.
-- Fall back to a bundled static schema when Unity has not generated one.
+- Do not bundle a static schema. If Unity has not generated
+  `UIElementsSchema/UIElements.xsd`, start without Unity completion, report the missing
+  file, and recover when Unity generates it.
 - Document the schema-generation step and the fallback.
 - Test against Unity 2022.3, Unity 6, and a project with custom `UxmlFactory`
   elements.
-- Decide whether to expose LemMinX diagnostics as Zed diagnostics or keep them
-  opt-in.
+- Keep LemMinX schema diagnostics off by default and expose them through
+  `lsp.unity-uxml.settings`.
 
 **Exit:** tag/attribute/enum completion and validation on the fixtures and a real
 Unity project.

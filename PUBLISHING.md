@@ -11,9 +11,9 @@ This document is the release checklist for submitting the extension to the
 | Registry submodule | `extensions/unity` |
 | Repository | `https://github.com/Dust-Games-Studio/Zed-Unity-Extension` |
 | License | MIT, at the repository root |
-| Version | `0.2.1` in `extension.toml` |
+| Version | `0.3.0` in `extension.toml` |
 | Rust extension | `Cargo.toml`, `src/`, and the `lsp/` workspace member |
-| Bundled binaries | None; `unity-asmdef-lsp` is downloaded from a GitHub release at runtime |
+| Bundled binaries | None; `unity-asmdef-lsp` and LemMinX are downloaded at runtime |
 
 The ID `unity` is not used by another extension in `zed-industries/extensions`.
 `unity-debugger` and `unity-snippets` are separate IDs.
@@ -54,13 +54,19 @@ Then complete the manual Zed check at the exact commit you will submit:
 8. Place the cursor on an unresolved reference and confirm the remove, nearest-name, and
    `GUID:`/name conversion quick fixes appear where applicable.
 9. Open project symbols and confirm project and package assemblies are listed.
-10. Open `tests/fixtures/lsp-project/Assets/Broken/Broken.asmdef` and confirm the parse
+10. Open a `.uxml` with a generated `UIElementsSchema`; confirm tag, attribute, and enum
+    completion, including a project custom element if the project has one.
+11. Temporarily rename the schema directory; confirm `schema_reference.4` names the
+    missing file and that Zed stays responsive. Restore it and confirm completion returns.
+12. Enable `lsp.unity-uxml.settings.xml.validation.enabled` and confirm schema diagnostics
+    appear only after opting in.
+13. Open `tests/fixtures/lsp-project/Assets/Broken/Broken.asmdef` and confirm the parse
     diagnostic; confirm malformed asmdef syntax also highlights as an error.
-11. Confirm `.cs` still uses the official C# extension and no second C# server starts.
-12. Run `task: spawn` from a Unity file and confirm all five Unity tasks appear.
-13. Run `zed: open log` and confirm there are no grammar, query, language registration,
+14. Confirm `.cs` still uses the official C# extension and no second C# server starts.
+15. Run `task: spawn` from a Unity file and confirm all five Unity tasks appear.
+16. Run `zed: open log` and confirm there are no grammar, query, language registration,
     or server startup errors.
-14. Confirm `@error` is visible in your theme for the invalid UXML/USS fixtures.
+17. Confirm `@error` is visible in your theme for the invalid UXML/USS fixtures.
 
 Do not submit until `main` is clean, pushed, and the checked-out commit is on a
 branch. The registry uses the checked-out submodule commit, and detached commits
@@ -89,6 +95,12 @@ The release workflow builds these assets and generates `SHA256SUMS`:
 The extension verifies the downloaded binary against `SHA256SUMS` before marking it
 executable. Users can always bypass the download with `lsp.unity-asmdef.binary.path`
 or a `unity-asmdef-lsp` binary on `PATH`.
+
+The UXML server is upstream LemMinX `0.29.3`, downloaded from
+`redhat-developer/vscode-xml` and verified against pinned SHA-256 values in
+`src/lib.rs`. It is not built by this repository and is not bundled with the extension.
+The extension release does not require a new `unity-asmdef-lsp` tag when only the
+extension changes.
 
 ### Snippets
 
@@ -127,7 +139,7 @@ upstream.
    ```toml
    [unity]
    submodule = "extensions/unity"
-   version = "0.2.1"
+   version = "0.3.0"
    ```
 
    The `version` must exactly match `version` in this repository's
@@ -151,9 +163,10 @@ Update the "pending" note in the README installation section at that point.
 
 ## Updating an already published extension
 
-1. Bump `version` in `extension.toml`, `Cargo.toml`, and `lsp/Cargo.toml`; update the
-   pinned `LSP_TAG` in `src/lib.rs`; commit the release to `main`.
-2. Push the `unity-asmdef-lsp-v<version>` tag so the server release is published.
+1. For an extension-only release, bump `version` in `extension.toml` and `Cargo.toml`;
+   commit and push `main`.
+2. For a language-server release, also bump `lsp/Cargo.toml` and the pinned `LSP_TAG` in
+   `src/lib.rs`, then push the `unity-asmdef-lsp-v<version>` tag.
 3. Push `main` to the public repository.
 4. In your `zed-industries/extensions` fork:
 

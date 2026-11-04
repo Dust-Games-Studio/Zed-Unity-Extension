@@ -1,6 +1,6 @@
 id = "unity"
 name = "Unity"
-version = "0.2.1"
+version = "0.3.0"
 schema_version = 1
 authors = ["Dust Games Studio"]
 license = "MIT"
@@ -53,3 +53,8 @@ rev = "67e8a4e67b1026889eb41709cea66ec1bcfa6ad5"
 name = "Unity Assembly Definition LSP"
 languages = ["Unity Assembly Definition"]
 language_ids = { "Unity Assembly Definition" = "json" }
+
+[language_servers.unity-uxml]
+name = "Unity UXML Language Server"
+languages = ["Unity UXML"]
+language_ids = { "Unity UXML" = "xml" }

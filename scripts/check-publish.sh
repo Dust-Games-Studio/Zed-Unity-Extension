@@ -342,7 +342,7 @@ if rust_sources:
         err("Rust extension must declare at least one [language_servers] entry")
     else:
         ok(f"{len(servers)} language server(s) declared")
-        forbidden_languages = {"CSharp", "Unity UXML", "Unity USS"}
+        forbidden_languages = {"CSharp", "Unity USS"}
         for server_name, server in servers.items():
             if not isinstance(server, dict):
                 err(f"language server '{server_name}' must be a table")

@@ -88,8 +88,68 @@ Then either put `target/release/unity-asmdef-lsp` on `PATH` or configure it:
 ```
 
 The extension detects Unity projects at the workspace root and in nested folders. It
-only attaches the server to **Unity Assembly Definition**; C# remains fully owned by
-the official C# extension. UXML and USS completion is not part of `0.2.1`.
+only attaches the asmdef server to **Unity Assembly Definition**; C# remains fully owned
+by the official C# extension. UXML completion is implemented in `0.3.0` through LemMinX;
+USS completion is still deferred.
+
+## UXML language server
+
+`.uxml` files are served by LemMinX `0.29.3`, downloaded from the upstream
+`redhat-developer/vscode-xml` release on first use. The extension points LemMinX at the
+Unity-generated schema:
+
+```text
+<project>/UIElementsSchema/UIElements.xsd
+```
+
+Unity regenerates that schema when it imports scripts, so keep the Editor open when you
+add custom `UxmlFactory`/`UxmlElement` types; LemMinX reloads the schema through its
+watched-file registration.
+
+Completion for Unity tags, attributes, and enum values is on by default. Schema
+validation is **off by default** because some Unity versions generate XSD files that do
+not compile cleanly. Opt in with:
+
+```json
+{
+  "lsp": {
+    "unity-uxml": {
+      "settings": {
+        "xml": {
+          "validation": { "enabled": true }
+        }
+      }
+    }
+  }
+}
+```
+
+The full LemMinX settings object is accepted under `lsp.unity-uxml.settings`, using the
+`xml` wrapper shown above. Relative `xml.catalogs` and
+`xml.fileAssociations[].systemId` paths are resolved against the project root.
+
+If `UIElementsSchema/UIElements.xsd` is missing, the server still starts but completion
+returns no Unity elements and LemMinX reports `schema_reference.4` naming the missing
+file. Generate the schema by opening a UXML file in Unity, or restart the language server
+after Unity creates it. Multi-Unity-project workspaces can set explicit
+`xml.fileAssociations` to route each project to its own schema.
+
+To use a local LemMinX instead:
+
+```json
+{
+  "lsp": {
+    "unity-uxml": {
+      "binary": {
+        "path": "/absolute/path/to/lemminx"
+      }
+    }
+  }
+}
+```
+
+Known upstream limit: namespaced package custom elements may be inserted without their
+namespace prefix. Global-namespace project custom elements complete normally.
 
 ## Installation
 
@@ -323,11 +383,17 @@ Manual Zed check:
    `GUID:`/name conversion quick fixes appear where applicable.
 9. Open project symbols (`cmd-t` / `ctrl-t`) and confirm project and package assemblies are
    listed.
-10. Open the committed broken fixture and confirm the parse diagnostic appears; confirm a
+10. Open a `.uxml` in a Unity project with a generated `UIElementsSchema`; confirm tags,
+    attributes, and enum values complete.
+11. Temporarily rename `UIElementsSchema`; confirm the missing-schema diagnostic appears
+    and the server stays running. Restore it and confirm completion returns.
+12. Enable UXML validation in `lsp.unity-uxml.settings`; confirm diagnostics appear only
+    after opting in.
+13. Open the committed broken fixture and confirm the parse diagnostic appears; confirm a
     malformed asmdef also highlights as an error.
-11. Confirm `.cs` still uses the official C# extension and receives no extra server.
-12. Open `task: spawn` from a Unity YAML file and confirm all five tasks appear.
-13. Run the checks that your environment supports and report any query or grammar errors.
+14. Confirm `.cs` still uses the official C# extension and receives no extra server.
+15. Open `task: spawn` from a Unity YAML file and confirm all five tasks appear.
+16. Run the checks that your environment supports and report any query or grammar errors.
 
 ## Future work
 
