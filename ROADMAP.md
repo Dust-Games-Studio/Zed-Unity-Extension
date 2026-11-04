@@ -1,22 +1,27 @@
 # Unity for Zed — Roadmap
 
-Last updated: 2026-11-02
+Last updated: 2026-11-04
 
 ## Current state
 
-`0.2.0` is a Rust Zed extension with a native assembly-definition language server:
+`0.2.1` is a Rust Zed extension with a native assembly-definition language server:
 
 - Five languages: Unity Assembly Definition, Unity YAML, Unity UXML, Unity USS,
   Unity ShaderLab.
 - Pinned Tree-sitter grammars, highlighting, outlines, brackets, indentation, and
   ShaderLab injections.
 - Five Unity CLI tasks and 101 Unity C# snippets.
-- `unity-asmdef-lsp`: project-aware completion, diagnostics, and go-to-definition
-  for `.asmdef`/`.asmref`, including read-only package assemblies.
+- `unity-asmdef-lsp`: project-aware completion, diagnostics, go-to-definition,
+  find-references, rename, hover, quick fixes, and workspace symbols for
+  `.asmdef`/`.asmref`, including read-only package assemblies.
 - Preflight and publish documentation in [PUBLISHING.md](PUBLISHING.md).
 
+`0.2.1` adds the navigation and refactoring layer on top of the `0.2.0` server:
+find-references across assembly files, rename across declarations and name-based
+references, assembly hover, reference quick fixes, and project symbols.
+
 `0.1.0` was the declarative release. UXML/USS completion and C#-aware UXML were
-intentionally deferred; `0.2.0` does not attach a language server to C#, UXML, or USS.
+intentionally deferred; `0.2.x` does not attach a language server to C#, UXML, or USS.
 
 Zed only provides dynamic completion through a language server; a declarative
 extension cannot compute project-specific values such as "other assemblies" in an
@@ -38,9 +43,10 @@ not a patch to `0.1.0`.
 existing servers where possible. Add C only for features that genuinely need the
 Unity Editor.
 
-`0.1.0` shipped first. `0.2.0` implements option B for assembly definitions with a
-custom server; package assemblies are read-only completion/definition sources and the
-rest of `Library/` is never scanned.
+`0.1.0` shipped first. `0.2.0` implemented option B for assembly definitions with a
+custom server; `0.2.1` adds navigation and refactoring. Package assemblies are
+read-only completion/definition/reference/hover sources and the rest of `Library/` is
+never scanned.
 
 ## What can be reused
 
@@ -110,7 +116,7 @@ Unity project.
 
 ### Phase 3 — `.asmdef` language server MVP
 
-**Status: implemented in `0.2.0`.**
+**Status: implemented in `0.2.0`; navigation and refactoring added in `0.2.1`.**
 
 **Goal:** Complete "other assemblies" and the rest of the asmdef schema.
 
@@ -129,6 +135,12 @@ MVP features:
 - Diagnostics: unresolved references, duplicate assembly names, reference cycles,
   and an `.asmref` pointing at a missing assembly.
 - Go-to-definition from a reference to the `.asmdef`/`.asmref` that declares it.
+- Find references across `.asmdef` and `.asmref` files.
+- Rename an assembly declaration and its name-based references.
+- Hover with path, GUID, project/package origin, root namespace, and referencing count.
+- Quick fixes for unresolved references, `GUID:`/name conversion, and nearest-name
+  repair.
+- Workspace symbols for project and package assemblies.
 - Watch `.asmdef`, `.asmref`, `manifest.json`, and `packages-lock.json` for changes.
 
 Distribution: platform-specific binaries on GitHub Releases with SHA-256 checksums;
@@ -141,13 +153,17 @@ Implemented behavior:
 - Strict JSON and schema diagnostics, including malformed asmdef files.
 - Unresolved references, duplicate names, cycles, and missing asmref targets.
 - Go-to-definition and server-side file watching.
+- Find-references, rename (package assemblies and ambiguous names refused), hover,
+  quick fixes, and workspace symbols.
+- Mixed-case `GUID:` references resolve consistently across definition, diagnostics,
+  hover, references, and rename.
 - Read-only package assemblies from `Packages/` and lockfile-selected
   `Library/PackageCache/` directories.
 - Local binary override and PATH resolution.
 - `--check <project>` for CI and manual index/diagnostic inspection.
 
-**Exit:** completion and diagnostics for the asmdef fixture set and a real Unity
-project, with cross-platform release artifacts.
+**Exit:** completion, diagnostics, and navigation for the asmdef fixture set and a real
+Unity project, with cross-platform release artifacts.
 
 ### Phase 4 — USS completion
 
@@ -211,12 +227,12 @@ the chosen path.
 ## Open questions
 
 1. Ship `0.1.0` before adding Rust, or hold the release for Phase 1?
-   Resolved: `0.1.0` shipped first; `0.2.0` adds Rust and the asmdef server.
+   Resolved: `0.1.0` shipped first; `0.2.x` adds Rust and the asmdef server.
 2. One extension or a separate language-server extension? Resolved: one.
 3. For USS, wait for `unity_code_native` releases or build a small server?
-   Still open; USS is out of scope for `0.2.0`.
+   Still open; USS is out of scope for `0.2.x`.
 4. Is a static UXML fallback schema acceptable when Unity has not generated
-   `UIElementsSchema`? Still open; UXML is out of scope for `0.2.0`.
+   `UIElementsSchema`? Still open; UXML is out of scope for `0.2.x`.
 5. Is C#-aware UXML worth a Unity Editor companion package, or is XSD completion
    enough for v1? Deferred; the UXML-to-C# bridge was excluded from the current scope.
 

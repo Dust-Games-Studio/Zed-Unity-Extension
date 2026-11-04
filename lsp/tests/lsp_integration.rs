@@ -211,11 +211,36 @@ fn fixture() -> tempfile::TempDir {
     );
     write(&root.join("Assets/Broken.asmdef"), r#"{"name": }"#);
     write(&root.join("Assets/Refs/Ref.asmref"), r#"{"reference":""}"#);
+    write(
+        &root.join("Assets/Consumer/Consumer.asmdef"),
+        r#"{"name":"Consumer","references":["Game","Shard"]}"#,
+    );
     temp
 }
 
 fn file_url(path: &Path) -> Url {
     Url::from_file_path(path).unwrap()
+}
+
+fn position_at(text: &str, needle: &str) -> (u32, u32) {
+    let offset = text.find(needle).expect("needle in text");
+    let prefix = &text[..offset];
+    let line = prefix.matches('\n').count() as u32;
+    let character = prefix
+        .rsplit('\n')
+        .next()
+        .unwrap_or_default()
+        .encode_utf16()
+        .count() as u32;
+    (line, character)
+}
+
+fn range_at(text: &str, needle: &str) -> Value {
+    let (line, character) = position_at(text, needle);
+    json!({
+        "start": { "line": line, "character": character },
+        "end": { "line": line, "character": character },
+    })
 }
 
 #[test]
@@ -384,6 +409,138 @@ fn publishes_diagnostics_under_a_symlinked_workspace_root() {
             .iter()
             .any(|diagnostic| diagnostic["code"] == "asmdef.parse-error"),
         "missing parse diagnostic under symlinked root: {diagnostics:?}"
+    );
+}
+
+#[test]
+fn supports_navigation_rename_actions_and_symbols() {
+    let temp = fixture();
+    let root = temp.path();
+    let consumer_path = root.join("Assets/Consumer/Consumer.asmdef");
+    let consumer_url = file_url(&consumer_path);
+    let consumer_text = std::fs::read_to_string(&consumer_path).unwrap();
+    let game_path = root.join("Assets/Game/Game.asmdef");
+    let game_url = file_url(&game_path);
+
+    let mut client = LspClient::start();
+    let result = client.request(
+        "initialize",
+        json!({
+            "processId": null,
+            "rootUri": file_url(root),
+            "capabilities": {},
+        }),
+    );
+    assert_eq!(result["capabilities"]["referencesProvider"], json!(true));
+    assert_eq!(result["capabilities"]["hoverProvider"], json!(true));
+    assert_eq!(
+        result["capabilities"]["renameProvider"]["prepareProvider"],
+        json!(true)
+    );
+    assert!(result["capabilities"]["codeActionProvider"].is_object());
+    assert_eq!(
+        result["capabilities"]["workspaceSymbolProvider"],
+        json!(true)
+    );
+    client.notify("initialized", json!({}));
+
+    client.notify(
+        "textDocument/didOpen",
+        json!({
+            "textDocument": {
+                "uri": consumer_url,
+                "languageId": "json",
+                "version": 1,
+                "text": consumer_text,
+            }
+        }),
+    );
+
+    let (line, character) = position_at(&consumer_text, "Game");
+    let references = client.request(
+        "textDocument/references",
+        json!({
+            "textDocument": { "uri": consumer_url },
+            "position": { "line": line, "character": character },
+            "context": { "includeDeclaration": true },
+        }),
+    );
+    let locations = definition_locations(&references);
+    assert!(
+        locations.iter().any(|location| location["uri"]
+            .as_str()
+            .is_some_and(|uri| uri == game_url.as_str())),
+        "missing Game declaration: {locations:?}"
+    );
+    assert!(
+        locations.iter().any(|location| location["uri"]
+            .as_str()
+            .is_some_and(|uri| uri == consumer_url.as_str())),
+        "missing Consumer reference: {locations:?}"
+    );
+
+    let hover = client.request(
+        "textDocument/hover",
+        json!({
+            "textDocument": { "uri": consumer_url },
+            "position": { "line": line, "character": character },
+        }),
+    );
+    let hover_text = hover["contents"]["value"].as_str().unwrap_or_default();
+    assert!(hover_text.contains("Game"), "missing hover: {hover:?}");
+    assert!(
+        hover_text.contains("Assets/Game/Game.asmdef"),
+        "missing hover path: {hover:?}"
+    );
+
+    let prepare = client.request(
+        "textDocument/prepareRename",
+        json!({
+            "textDocument": { "uri": consumer_url },
+            "position": { "line": line, "character": character },
+        }),
+    );
+    assert_eq!(prepare["placeholder"], json!("Game"));
+
+    let rename = client.request(
+        "textDocument/rename",
+        json!({
+            "textDocument": { "uri": consumer_url },
+            "position": { "line": line, "character": character },
+            "newName": "Game.Renamed",
+        }),
+    );
+    assert!(
+        rename["changes"].get(game_url.as_str()).is_some(),
+        "missing declaration edit: {rename:?}"
+    );
+    assert!(
+        rename["changes"].get(consumer_url.as_str()).is_some(),
+        "missing reference edit: {rename:?}"
+    );
+
+    let shard_range = range_at(&consumer_text, "Shard");
+    let actions = client.request(
+        "textDocument/codeAction",
+        json!({
+            "textDocument": { "uri": consumer_url },
+            "range": shard_range,
+            "context": { "diagnostics": [] },
+        }),
+    );
+    let actions = actions.as_array().cloned().unwrap_or_default();
+    assert!(
+        actions
+            .iter()
+            .any(|action| action["title"] == json!("Add reference to `Shared`")),
+        "missing nearest-reference action: {actions:?}"
+    );
+
+    let symbols = client.request("workspace/symbol", json!({ "query": "Game" }));
+    let symbols = symbols.as_array().cloned().unwrap_or_default();
+    assert!(
+        symbols.iter().any(|symbol| symbol["name"] == json!("Game")),
+        "missing Game symbol: {symbols:?}"
     );
 }
 

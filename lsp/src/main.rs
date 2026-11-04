@@ -1,14 +1,23 @@
+mod actions;
 mod check;
 mod completion;
 mod context;
 mod definition;
 mod diagnostics;
+mod hover;
 mod index;
 mod parse;
 mod paths;
 mod platforms;
+mod references;
+mod rename;
+mod resolve;
 mod server;
+mod symbols;
 mod watcher;
+
+#[cfg(test)]
+mod test_support;
 
 use std::path::PathBuf;
 

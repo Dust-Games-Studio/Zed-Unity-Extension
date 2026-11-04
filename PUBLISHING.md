@@ -11,7 +11,7 @@ This document is the release checklist for submitting the extension to the
 | Registry submodule | `extensions/unity` |
 | Repository | `https://github.com/Dust-Games-Studio/Zed-Unity-Extension` |
 | License | MIT, at the repository root |
-| Version | `0.2.0` in `extension.toml` |
+| Version | `0.2.1` in `extension.toml` |
 | Rust extension | `Cargo.toml`, `src/`, and the `lsp/` workspace member |
 | Bundled binaries | None; `unity-asmdef-lsp` is downloaded from a GitHub release at runtime |
 
@@ -46,13 +46,21 @@ Then complete the manual Zed check at the exact commit you will submit:
 3. Open an `.asmdef`, trigger completion in `references`, and confirm project and package
    assembly names and `GUID:` forms appear.
 4. Use go-to-definition on a reference and confirm it opens the target assembly.
-5. Open `tests/fixtures/lsp-project/Assets/Broken/Broken.asmdef` and confirm the parse
-   diagnostic; confirm malformed asmdef syntax also highlights as an error.
-6. Confirm `.cs` still uses the official C# extension and no second C# server starts.
-7. Run `task: spawn` from a Unity file and confirm all five Unity tasks appear.
-8. Run `zed: open log` and confirm there are no grammar, query, language registration,
-   or server startup errors.
-9. Confirm `@error` is visible in your theme for the invalid UXML/USS fixtures.
+5. Use find-references on an assembly name and confirm references from other
+   `.asmdef`/`.asmref` files appear.
+6. Hover an assembly name and confirm path, GUID, origin, and referencing count.
+7. Use rename on a project assembly and confirm the declaration and name-based references
+   appear in the preview; confirm a package assembly refuses the rename.
+8. Place the cursor on an unresolved reference and confirm the remove, nearest-name, and
+   `GUID:`/name conversion quick fixes appear where applicable.
+9. Open project symbols and confirm project and package assemblies are listed.
+10. Open `tests/fixtures/lsp-project/Assets/Broken/Broken.asmdef` and confirm the parse
+    diagnostic; confirm malformed asmdef syntax also highlights as an error.
+11. Confirm `.cs` still uses the official C# extension and no second C# server starts.
+12. Run `task: spawn` from a Unity file and confirm all five Unity tasks appear.
+13. Run `zed: open log` and confirm there are no grammar, query, language registration,
+    or server startup errors.
+14. Confirm `@error` is visible in your theme for the invalid UXML/USS fixtures.
 
 Do not submit until `main` is clean, pushed, and the checked-out commit is on a
 branch. The registry uses the checked-out submodule commit, and detached commits
@@ -67,7 +75,7 @@ workspace member and downloads a pinned release at runtime.
 Publish the server first, using a tag matching the version in `src/lib.rs`:
 
 ```text
-unity-asmdef-lsp-v0.2.0
+unity-asmdef-lsp-v0.2.1
 ```
 
 The release workflow builds these assets and generates `SHA256SUMS`:
@@ -119,7 +127,7 @@ upstream.
    ```toml
    [unity]
    submodule = "extensions/unity"
-   version = "0.2.0"
+   version = "0.2.1"
    ```
 
    The `version` must exactly match `version` in this repository's

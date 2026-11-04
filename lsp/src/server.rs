@@ -4,25 +4,36 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::{Mutex, RwLock};
-use tower_lsp::jsonrpc::Result;
+use tower_lsp::jsonrpc::{Error, Result};
 use tower_lsp::lsp_types::{
-    CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams,
-    DidChangeWatchedFilesParams, DidChangeWatchedFilesRegistrationOptions,
-    DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams, FileSystemWatcher, GlobPattern, GotoDefinitionParams,
-    GotoDefinitionResponse, InitializeParams, InitializeResult, InitializedParams, MessageType,
-    OneOf, Registration, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url, WatchKind,
-    WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+    CodeActionKind, CodeActionOptions, CodeActionOrCommand, CodeActionParams,
+    CodeActionProviderCapability, CodeActionResponse, CompletionOptions, CompletionParams,
+    CompletionResponse, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
+    DidChangeWatchedFilesRegistrationOptions, DidChangeWorkspaceFoldersParams,
+    DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+    FileSystemWatcher, GlobPattern, GotoDefinitionParams, GotoDefinitionResponse, Hover,
+    HoverParams, HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams,
+    Location, MessageType, OneOf, PrepareRenameResponse, ReferenceParams, Registration,
+    RenameOptions, RenameParams, ServerCapabilities, ServerInfo, SymbolInformation,
+    TextDocumentPositionParams, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Url, WatchKind, WorkDoneProgressOptions,
+    WorkspaceEdit, WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+    WorkspaceSymbolParams,
 };
 use tower_lsp::{Client, LanguageServer};
 
+use crate::actions;
 use crate::completion;
 use crate::context::LineIndex;
 use crate::definition;
 use crate::diagnostics;
+use crate::hover;
 use crate::index::{self, WorkspaceIndex};
+use crate::parse::TextRange;
 use crate::paths;
+use crate::references;
+use crate::rename;
+use crate::symbols;
 use crate::watcher::{self, WatcherHandle};
 
 pub struct Backend {
@@ -317,6 +328,20 @@ impl LanguageServer for Backend {
                     ..CompletionOptions::default()
                 }),
                 definition_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
+                rename_provider: Some(OneOf::Right(RenameOptions {
+                    prepare_provider: Some(true),
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                })),
+                code_action_provider: Some(CodeActionProviderCapability::Options(
+                    CodeActionOptions {
+                        code_action_kinds: Some(vec![CodeActionKind::QUICKFIX]),
+                        work_done_progress_options: WorkDoneProgressOptions::default(),
+                        resolve_provider: Some(false),
+                    },
+                )),
+                workspace_symbol_provider: Some(OneOf::Left(true)),
                 workspace: Some(WorkspaceServerCapabilities {
                     workspace_folders: Some(WorkspaceFoldersServerCapabilities {
                         supported: Some(true),
@@ -503,6 +528,178 @@ impl LanguageServer for Backend {
         } else {
             Ok(Some(GotoDefinitionResponse::Array(locations)))
         }
+    }
+
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        let Some(path) = uri_to_path(&params.text_document_position.text_document.uri) else {
+            return Ok(None);
+        };
+        let path = index::normalize_path(&path);
+        let state = self.inner.state.read().await;
+        let Some(project) = state.index.project_for_path(&path) else {
+            return Ok(None);
+        };
+        let Some(file) = project.file(&path) else {
+            return Ok(None);
+        };
+        let Some(text) = state
+            .open_documents
+            .get(&path)
+            .map(|document| document.text.clone())
+            .or_else(|| std::fs::read_to_string(&path).ok())
+        else {
+            return Ok(None);
+        };
+
+        let line_index = LineIndex::new(&text);
+        let offset = line_index.position_to_offset(&text, params.text_document_position.position);
+        let locations =
+            references::locations(project, file, offset, params.context.include_declaration);
+        if locations.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(locations))
+        }
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let Some(path) = uri_to_path(&params.text_document_position_params.text_document.uri)
+        else {
+            return Ok(None);
+        };
+        let path = index::normalize_path(&path);
+        let state = self.inner.state.read().await;
+        let Some(project) = state.index.project_for_path(&path) else {
+            return Ok(None);
+        };
+        let Some(file) = project.file(&path) else {
+            return Ok(None);
+        };
+        let Some(text) = state
+            .open_documents
+            .get(&path)
+            .map(|document| document.text.clone())
+            .or_else(|| std::fs::read_to_string(&path).ok())
+        else {
+            return Ok(None);
+        };
+
+        let line_index = LineIndex::new(&text);
+        let offset =
+            line_index.position_to_offset(&text, params.text_document_position_params.position);
+        Ok(hover::hover(project, file, offset))
+    }
+
+    async fn prepare_rename(
+        &self,
+        params: TextDocumentPositionParams,
+    ) -> Result<Option<PrepareRenameResponse>> {
+        let Some(path) = uri_to_path(&params.text_document.uri) else {
+            return Ok(None);
+        };
+        let path = index::normalize_path(&path);
+        let state = self.inner.state.read().await;
+        let Some(project) = state.index.project_for_path(&path) else {
+            return Ok(None);
+        };
+        let Some(file) = project.file(&path) else {
+            return Ok(None);
+        };
+        let Some(text) = state
+            .open_documents
+            .get(&path)
+            .map(|document| document.text.clone())
+            .or_else(|| std::fs::read_to_string(&path).ok())
+        else {
+            return Ok(None);
+        };
+
+        let line_index = LineIndex::new(&text);
+        let offset = line_index.position_to_offset(&text, params.position);
+        match rename::prepare(project, file, offset) {
+            None => Ok(None),
+            Some(Ok(response)) => Ok(Some(response)),
+            Some(Err(message)) => Err(Error::invalid_params(message)),
+        }
+    }
+
+    async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        let Some(path) = uri_to_path(&params.text_document_position.text_document.uri) else {
+            return Ok(None);
+        };
+        let path = index::normalize_path(&path);
+        let state = self.inner.state.read().await;
+        let Some(project) = state.index.project_for_path(&path) else {
+            return Ok(None);
+        };
+        let Some(file) = project.file(&path) else {
+            return Ok(None);
+        };
+        let Some(text) = state
+            .open_documents
+            .get(&path)
+            .map(|document| document.text.clone())
+            .or_else(|| std::fs::read_to_string(&path).ok())
+        else {
+            return Ok(None);
+        };
+
+        let line_index = LineIndex::new(&text);
+        let offset = line_index.position_to_offset(&text, params.text_document_position.position);
+        match rename::rename(project, file, offset, &params.new_name) {
+            Ok(edit) => Ok(Some(edit)),
+            Err(message) => Err(Error::invalid_params(message)),
+        }
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let Some(path) = uri_to_path(&params.text_document.uri) else {
+            return Ok(None);
+        };
+        let path = index::normalize_path(&path);
+        let state = self.inner.state.read().await;
+        let Some(project) = state.index.project_for_path(&path) else {
+            return Ok(None);
+        };
+        let Some(file) = project.file(&path) else {
+            return Ok(None);
+        };
+        let Some(text) = state
+            .open_documents
+            .get(&path)
+            .map(|document| document.text.clone())
+            .or_else(|| std::fs::read_to_string(&path).ok())
+        else {
+            return Ok(None);
+        };
+
+        let line_index = LineIndex::new(&text);
+        let range = TextRange::new(
+            line_index.position_to_offset(&text, params.range.start),
+            line_index.position_to_offset(&text, params.range.end),
+        );
+        let actions = actions::code_actions(project, file, range);
+        if actions.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(
+                actions
+                    .into_iter()
+                    .map(CodeActionOrCommand::CodeAction)
+                    .collect(),
+            ))
+        }
+    }
+
+    async fn symbol(
+        &self,
+        params: WorkspaceSymbolParams,
+    ) -> Result<Option<Vec<SymbolInformation>>> {
+        let state = self.inner.state.read().await;
+        Ok(Some(symbols::workspace_symbols(
+            &state.index,
+            &params.query,
+        )))
     }
 }
 

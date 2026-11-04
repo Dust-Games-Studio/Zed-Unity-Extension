@@ -1,10 +1,10 @@
 id = "unity"
 name = "Unity"
-version = "0.2.0"
+version = "0.2.1"
 schema_version = 1
 authors = ["Dust Games Studio"]
 license = "MIT"
-description = "Unity file format support with an assembly definition language server, Unity YAML, UI Toolkit UXML/USS, and ShaderLab."
+description = "Unity file format support with an assembly definition language server, navigation, refactoring, Unity YAML, UI Toolkit UXML/USS, and ShaderLab."
 repository = "https://github.com/Dust-Games-Studio/Zed-Unity-Extension"
 capabilities = []
 

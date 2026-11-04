@@ -18,8 +18,8 @@ pub fn locations(project: &ProjectIndex, file: &IndexedFile, offset: usize) -> V
         return Vec::new();
     };
 
-    let targets = if let Some(guid) = reference.value.strip_prefix("GUID:") {
-        project.find_by_guid(&guid.to_ascii_lowercase())
+    let targets = if let Some(guid) = crate::resolve::guid_reference(&reference.value) {
+        project.find_by_guid(guid)
     } else {
         project.find_by_name(&reference.value)
     };
@@ -76,6 +76,11 @@ mod tests {
             asmref: parsed.asmref,
             guid: None,
         }
+    }
+
+    fn with_guid(mut file: IndexedFile, guid: &str) -> IndexedFile {
+        file.guid = Some(guid.to_string());
+        file
     }
 
     fn project(files: Vec<IndexedFile>) -> ProjectIndex {
@@ -146,6 +151,26 @@ mod tests {
             .unwrap();
         let offset = ref_text.find("Shared").unwrap() + 2;
         let locations = locations(&project, reference, offset);
+        assert_eq!(locations.len(), 1);
+        assert!(locations[0].uri.as_str().ends_with("Shared.asmdef"));
+    }
+
+    #[test]
+    fn goes_to_a_guid_reference_in_any_case() {
+        let game_text =
+            r#"{ "name": "Game", "references": ["guid:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"] }"#;
+        let project = project(vec![
+            file("/project/Assets/Game.asmdef", game_text),
+            with_guid(
+                file("/project/Assets/Shared.asmdef", r#"{ "name": "Shared" }"#),
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            ),
+        ]);
+        let game = project
+            .file(&test_path("/project/Assets/Game.asmdef"))
+            .unwrap();
+        let offset = game_text.find("guid:").unwrap() + 2;
+        let locations = locations(&project, game, offset);
         assert_eq!(locations.len(), 1);
         assert!(locations[0].uri.as_str().ends_with("Shared.asmdef"));
     }

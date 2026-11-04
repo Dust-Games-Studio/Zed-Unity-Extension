@@ -104,7 +104,7 @@ fn resolve<'a>(
     by_name: &'a HashMap<String, Vec<&'a IndexedFile>>,
     by_guid: &'a HashMap<String, Vec<&'a IndexedFile>>,
 ) -> Vec<&'a IndexedFile> {
-    if let Some(guid) = reference.strip_prefix("GUID:") {
+    if let Some(guid) = crate::resolve::guid_reference(reference) {
         by_guid
             .get(&guid.to_ascii_lowercase())
             .cloned()
@@ -180,7 +180,7 @@ fn add_cycle_diagnostics(
         .map(|file| {
             let mut targets = HashSet::new();
             for reference in file.references() {
-                if let Some(guid) = reference.value.strip_prefix("GUID:") {
+                if let Some(guid) = crate::resolve::guid_reference(&reference.value) {
                     if let Some(indices) = by_guid.get(&guid.to_ascii_lowercase()) {
                         targets.extend(indices.iter().copied());
                     }
@@ -349,6 +349,11 @@ mod tests {
         file
     }
 
+    fn with_guid(mut file: IndexedFile, guid: &str) -> IndexedFile {
+        file.guid = Some(guid.to_string());
+        file
+    }
+
     fn workspace(files: Vec<IndexedFile>) -> WorkspaceIndex {
         WorkspaceIndex {
             projects: vec![ProjectIndex::new(
@@ -422,6 +427,21 @@ mod tests {
             external(
                 "/project/Library/PackageCache/com.unity.inputsystem@abc/Unity.InputSystem.asmdef",
                 r#"{ "name": "Unity.InputSystem" }"#,
+            ),
+        ]);
+        assert!(codes(&index, "/project/Assets/Game.asmdef").is_empty());
+    }
+
+    #[test]
+    fn resolves_guid_references_in_any_case() {
+        let index = workspace(vec![
+            file(
+                "/project/Assets/Game.asmdef",
+                r#"{ "name": "Game", "references": ["guid:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"] }"#,
+            ),
+            with_guid(
+                file("/project/Assets/Shared.asmdef", r#"{ "name": "Shared" }"#),
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             ),
         ]);
         assert!(codes(&index, "/project/Assets/Game.asmdef").is_empty());

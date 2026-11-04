@@ -11,7 +11,7 @@ use zed_extension_api::{
 const LSP_NAME: &str = "unity-asmdef";
 const LSP_BINARY: &str = "unity-asmdef-lsp";
 const LSP_REPO: &str = "Dust-Games-Studio/Zed-Unity-Extension";
-const LSP_TAG: &str = "unity-asmdef-lsp-v0.2.0";
+const LSP_TAG: &str = "unity-asmdef-lsp-v0.2.1";
 const CHECKSUMS_ASSET: &str = "SHA256SUMS";
 
 struct UnityExtension {
