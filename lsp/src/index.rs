@@ -77,7 +77,12 @@ pub struct PackageInfo {
 
 #[derive(Debug, Clone, Default)]
 pub struct ProjectIndex {
+    /// Canonical project root used for indexing and path identity.
     pub root: PathBuf,
+    /// Project root as the client named it. URIs sent back to the editor are
+    /// built from this path so a symlinked workspace root still matches the
+    /// documents the client opened.
+    pub display_root: PathBuf,
     pub files: Vec<IndexedFile>,
     pub dlls: Vec<DllFile>,
     pub packages: Vec<PackageInfo>,
@@ -94,6 +99,7 @@ impl ProjectIndex {
         packages: Vec<PackageInfo>,
     ) -> Self {
         let mut project = Self {
+            display_root: root.clone(),
             root,
             files,
             dlls,
@@ -274,10 +280,14 @@ pub fn build(
 }
 
 pub fn build_project(root: &Path, open_documents: &HashMap<PathBuf, String>) -> ProjectIndex {
+    // Keep the path the caller named so diagnostic URIs match what the client
+    // opened, but make it absolute so `file:` URLs can always be built.
+    let display_root = std::path::absolute(root).unwrap_or_else(|_| root.to_path_buf());
     let root = normalize_path(root);
     let packages = read_packages(&root);
     let mut project = ProjectIndex {
         root: root.clone(),
+        display_root,
         files: Vec::new(),
         dlls: Vec::new(),
         packages,
@@ -772,6 +782,16 @@ mod tests {
             .unwrap()
             .diagnostics
             .is_empty());
+    }
+
+    #[test]
+    fn display_root_is_absolute_for_relative_roots() {
+        let project = build_project(Path::new("relative-project"), &HashMap::new());
+        assert!(
+            project.display_root.is_absolute(),
+            "display root must be absolute: {:?}",
+            project.display_root
+        );
     }
 
     #[test]

@@ -27,7 +27,8 @@ pub fn locations(project: &ProjectIndex, file: &IndexedFile, offset: usize) -> V
     targets
         .into_iter()
         .filter_map(|target| {
-            let uri = Url::from_file_path(&target.path).ok()?;
+            let display_path = project.display_root.join(&target.relative_path);
+            let uri = Url::from_file_path(&display_path).ok()?;
             let span = target.name_span().unwrap_or(TextRange::new(0, 0));
             let line_index = LineIndex::new(&target.data_text);
             Some(Location {
@@ -40,19 +41,33 @@ pub fn locations(project: &ProjectIndex, file: &IndexedFile, offset: usize) -> V
 
 #[cfg(test)]
 mod tests {
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use std::sync::Arc;
 
     use super::*;
     use crate::index::ProjectIndex;
     use crate::parse;
 
+    fn test_project_root() -> PathBuf {
+        std::env::current_dir().unwrap().join("project")
+    }
+
+    fn relative_test_path(path: &str) -> &str {
+        path.strip_prefix("/project/").unwrap_or(path)
+    }
+
+    fn test_path(path: &str) -> PathBuf {
+        test_project_root().join(relative_test_path(path))
+    }
+
     fn file(path: &str, text: &str) -> IndexedFile {
-        let parsed = parse::parse_file(Path::new(path), text);
+        let relative_path = relative_test_path(path);
+        let path = test_project_root().join(relative_path);
+        let parsed = parse::parse_file(&path, text);
         IndexedFile {
             kind: parsed.kind,
-            path: PathBuf::from(path),
-            relative_path: path.to_string(),
+            path,
+            relative_path: relative_path.to_string(),
             external: false,
             text: Arc::from(text),
             data_text: Arc::from(text),
@@ -64,7 +79,7 @@ mod tests {
     }
 
     fn project(files: Vec<IndexedFile>) -> ProjectIndex {
-        ProjectIndex::new(PathBuf::from("/project"), files, Vec::new(), Vec::new())
+        ProjectIndex::new(test_project_root(), files, Vec::new(), Vec::new())
     }
 
     #[test]
@@ -75,7 +90,7 @@ mod tests {
             file("/project/Assets/Shared.asmdef", r#"{ "name": "Shared" }"#),
         ]);
         let game = project
-            .file(Path::new("/project/Assets/Game.asmdef"))
+            .file(&test_path("/project/Assets/Game.asmdef"))
             .unwrap();
         let offset = game_text.find("Shared").unwrap() + 2;
         let locations = locations(&project, game, offset);
@@ -92,10 +107,31 @@ mod tests {
             file("/project/Assets/B.asmdef", r#"{ "name": "Duplicate" }"#),
         ]);
         let game = project
-            .file(Path::new("/project/Assets/Game.asmdef"))
+            .file(&test_path("/project/Assets/Game.asmdef"))
             .unwrap();
         let offset = game_text.find("Duplicate").unwrap() + 2;
         assert_eq!(locations(&project, game, offset).len(), 2);
+    }
+
+    #[test]
+    fn definitions_use_the_display_root() {
+        let game_text = r#"{ "name": "Game", "references": ["Shared"] }"#;
+        let mut project = project(vec![
+            file("/project/Assets/Game.asmdef", game_text),
+            file("/project/Assets/Shared.asmdef", r#"{ "name": "Shared" }"#),
+        ]);
+        project.display_root = test_project_root().join("linked");
+        let game = project
+            .file(&test_path("/project/Assets/Game.asmdef"))
+            .unwrap();
+        let offset = game_text.find("Shared").unwrap() + 2;
+        let locations = locations(&project, game, offset);
+        assert_eq!(locations.len(), 1);
+        assert!(
+            locations[0].uri.as_str().contains("/linked/"),
+            "definition URI must use the display root: {}",
+            locations[0].uri
+        );
     }
 
     #[test]
@@ -106,7 +142,7 @@ mod tests {
             file("/project/Assets/Shared.asmdef", r#"{ "name": "Shared" }"#),
         ]);
         let reference = project
-            .file(Path::new("/project/Assets/Ref.asmref"))
+            .file(&test_path("/project/Assets/Ref.asmref"))
             .unwrap();
         let offset = ref_text.find("Shared").unwrap() + 2;
         let locations = locations(&project, reference, offset);

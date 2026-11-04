@@ -64,12 +64,13 @@ impl Backend {
 
 impl Inner {
     async fn open_document(&self, path: PathBuf, text: String, version: i32) -> bool {
+        let display_path = path.clone();
         let path = index::normalize_path(&path);
         let mut added_root = false;
         {
             let mut state = self.state.write().await;
             if state.index.project_for_path(&path).is_none() {
-                if let Some(root) = paths::project_root_for_file(&path) {
+                if let Some(root) = paths::project_root_for_file(&display_path) {
                     if !state.roots.contains(&root) {
                         state.roots.push(root);
                         added_root = true;
@@ -425,13 +426,11 @@ impl LanguageServer for Backend {
             let mut state = self.inner.state.write().await;
             for removed in params.event.removed {
                 if let Ok(path) = removed.uri.to_file_path() {
-                    let path = index::normalize_path(&path);
                     state.roots.retain(|root| root != &path);
                 }
             }
             for added in params.event.added {
                 if let Ok(path) = added.uri.to_file_path() {
-                    let path = index::normalize_path(&path);
                     if !state.roots.contains(&path) {
                         state.roots.push(path);
                     }

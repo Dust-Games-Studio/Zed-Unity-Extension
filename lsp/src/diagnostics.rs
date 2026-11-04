@@ -19,7 +19,8 @@ pub fn compute(index: &WorkspaceIndex) -> HashMap<Url, Vec<Diagnostic>> {
             let Some(file) = project.file(&path) else {
                 continue;
             };
-            let Ok(url) = Url::from_file_path(&path) else {
+            let display_path = project.display_root.join(&file.relative_path);
+            let Ok(url) = Url::from_file_path(&display_path) else {
                 continue;
             };
             result.insert(
@@ -316,12 +317,22 @@ mod tests {
     use crate::index::{ProjectIndex, WorkspaceIndex};
     use crate::parse;
 
+    fn test_project_root() -> PathBuf {
+        std::env::current_dir().unwrap().join("project")
+    }
+
+    fn relative_test_path(path: &str) -> &str {
+        path.strip_prefix("/project/").unwrap_or(path)
+    }
+
     fn file(path: &str, text: &str) -> IndexedFile {
-        let parsed = parse::parse_file(Path::new(path), text);
+        let relative_path = relative_test_path(path);
+        let path = test_project_root().join(relative_path);
+        let parsed = parse::parse_file(&path, text);
         IndexedFile {
             kind: parsed.kind,
-            path: PathBuf::from(path),
-            relative_path: path.to_string(),
+            path,
+            relative_path: relative_path.to_string(),
             external: false,
             text: Arc::from(text),
             data_text: Arc::from(text),
@@ -341,7 +352,7 @@ mod tests {
     fn workspace(files: Vec<IndexedFile>) -> WorkspaceIndex {
         WorkspaceIndex {
             projects: vec![ProjectIndex::new(
-                PathBuf::from("/project"),
+                test_project_root(),
                 files,
                 Vec::new(),
                 Vec::new(),
@@ -350,7 +361,8 @@ mod tests {
     }
 
     fn codes(index: &WorkspaceIndex, path: &str) -> Vec<String> {
-        let url = Url::from_file_path(Path::new(path)).unwrap();
+        let relative_path = relative_test_path(path);
+        let url = Url::from_file_path(index.projects[0].display_root.join(relative_path)).unwrap();
         compute(index)
             .get(&url)
             .map(|diagnostics| {
@@ -363,6 +375,24 @@ mod tests {
                     .collect()
             })
             .unwrap_or_default()
+    }
+
+    #[test]
+    fn diagnostic_urls_use_the_display_root() {
+        let mut index = workspace(vec![file(
+            "/project/Assets/Broken.asmdef",
+            r#"{ "name": }"#,
+        )]);
+        index.projects[0].display_root = test_project_root().join("linked");
+        let expected =
+            Url::from_file_path(index.projects[0].display_root.join("Assets/Broken.asmdef"))
+                .unwrap();
+        let computed = compute(&index);
+        assert!(
+            computed.contains_key(&expected),
+            "expected {expected}, got {:?}",
+            computed.keys().collect::<Vec<_>>()
+        );
     }
 
     #[test]

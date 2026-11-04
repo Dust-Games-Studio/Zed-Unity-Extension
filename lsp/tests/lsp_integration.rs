@@ -349,6 +349,44 @@ fn completes_defines_and_reports_malformed_files() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn publishes_diagnostics_under_a_symlinked_workspace_root() {
+    use std::os::unix::fs::symlink;
+
+    let real = tempfile::tempdir().unwrap();
+    write(
+        &real.path().join("ProjectSettings/ProjectVersion.txt"),
+        "m_EditorVersion: 6000.6.6f1",
+    );
+    write(&real.path().join("Assets/Broken.asmdef"), r#"{"name": }"#);
+
+    let links = tempfile::tempdir().unwrap();
+    let link = links.path().join("project");
+    symlink(real.path(), &link).unwrap();
+
+    let broken_url = file_url(&link.join("Assets/Broken.asmdef"));
+    let mut client = LspClient::start();
+    let result = client.request(
+        "initialize",
+        json!({
+            "processId": null,
+            "rootUri": file_url(&link),
+            "capabilities": {},
+        }),
+    );
+    assert!(result["capabilities"]["completionProvider"].is_object());
+    client.notify("initialized", json!({}));
+
+    let diagnostics = client.wait_for_diagnostics(broken_url.as_str());
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic["code"] == "asmdef.parse-error"),
+        "missing parse diagnostic under symlinked root: {diagnostics:?}"
+    );
+}
+
 #[test]
 fn check_mode_reports_broken_asmdefs() {
     let temp = fixture();
