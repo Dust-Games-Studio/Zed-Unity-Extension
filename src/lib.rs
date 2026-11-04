@@ -13,8 +13,14 @@ const LSP_BINARY: &str = "unity-asmdef-lsp";
 const LSP_REPO: &str = "Dust-Games-Studio/Zed-Unity-Extension";
 const LSP_TAG: &str = "unity-asmdef-lsp-v0.2.1";
 const CHECKSUMS_ASSET: &str = "SHA256SUMS";
+// Consumed by the UXML installer in Task 2.
+#[allow(dead_code)]
 const UXML_LSP_NAME: &str = "unity-uxml";
+// Consumed by the UXML installer in Task 2.
+#[allow(dead_code)]
 const LEM_MINX_REPO: &str = "redhat-developer/vscode-xml";
+// Consumed by the UXML installer in Task 2.
+#[allow(dead_code)]
 const LEM_MINX_TAG: &str = "0.29.3";
 const LEM_MINX_SHA256: &[(&str, &str)] = &[
     (
@@ -212,6 +218,8 @@ fn asset_name(platform: Os, architecture: Architecture) -> Result<&'static str> 
     }
 }
 
+// Consumed by the UXML installer in Task 2.
+#[allow(dead_code)]
 fn lemminx_asset(platform: Os, architecture: Architecture) -> Result<&'static str> {
     match (platform, architecture) {
         (Os::Linux, Architecture::X8664) => Ok("lemminx-linux-x86_64"),
@@ -223,6 +231,8 @@ fn lemminx_asset(platform: Os, architecture: Architecture) -> Result<&'static st
     }
 }
 
+// Consumed by the UXML installer in Task 2.
+#[allow(dead_code)]
 fn lemminx_sha256(asset: &str) -> Result<&'static str> {
     LEM_MINX_SHA256
         .iter()
