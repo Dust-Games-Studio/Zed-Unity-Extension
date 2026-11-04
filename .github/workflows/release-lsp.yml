@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "unity-asmdef-lsp-v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
