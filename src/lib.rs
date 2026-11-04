@@ -13,6 +13,31 @@ const LSP_BINARY: &str = "unity-asmdef-lsp";
 const LSP_REPO: &str = "Dust-Games-Studio/Zed-Unity-Extension";
 const LSP_TAG: &str = "unity-asmdef-lsp-v0.2.1";
 const CHECKSUMS_ASSET: &str = "SHA256SUMS";
+const UXML_LSP_NAME: &str = "unity-uxml";
+const LEM_MINX_REPO: &str = "redhat-developer/vscode-xml";
+const LEM_MINX_TAG: &str = "0.29.3";
+const LEM_MINX_SHA256: &[(&str, &str)] = &[
+    (
+        "lemminx-win32",
+        "25f571c0f07d0ad76be60a86c1b864d46cf7bf94773dc21e5d5da646478aac79",
+    ),
+    (
+        "lemminx-osx-x86_64",
+        "e13b4c135f56f906a7450bc9f64f49718bf743c5c4df8003a5610e1fb8772a55",
+    ),
+    (
+        "lemminx-osx-aarch_64",
+        "c5e9e2aee768eb69d041e9541cd0568a432ebd51c7fe9c1d7b7a1130b759475a",
+    ),
+    (
+        "lemminx-linux-x86_64",
+        "84cbbe3c31eb158799327d5f68a0dc876e81c431da596747b92eecffe956b3f2",
+    ),
+    (
+        "lemminx-linux-aarch_64",
+        "e706d10fbda4fa354952edb604800d067518401521d4d1e491b8bee7cf4cbcdb",
+    ),
+];
 
 struct UnityExtension {
     cached_binary_path: Option<String>,
@@ -187,6 +212,25 @@ fn asset_name(platform: Os, architecture: Architecture) -> Result<&'static str> 
     }
 }
 
+fn lemminx_asset(platform: Os, architecture: Architecture) -> Result<&'static str> {
+    match (platform, architecture) {
+        (Os::Linux, Architecture::X8664) => Ok("lemminx-linux-x86_64"),
+        (Os::Linux, Architecture::Aarch64) => Ok("lemminx-linux-aarch_64"),
+        (Os::Mac, Architecture::X8664) => Ok("lemminx-osx-x86_64"),
+        (Os::Mac, Architecture::Aarch64) => Ok("lemminx-osx-aarch_64"),
+        (Os::Windows, Architecture::X8664 | Architecture::Aarch64) => Ok("lemminx-win32"),
+        (_, Architecture::X86) => Err("unsupported architecture: 32-bit x86".to_string()),
+    }
+}
+
+fn lemminx_sha256(asset: &str) -> Result<&'static str> {
+    LEM_MINX_SHA256
+        .iter()
+        .find(|(name, _)| *name == asset)
+        .map(|(_, hash)| *hash)
+        .ok_or_else(|| format!("no pinned checksum for {asset}"))
+}
+
 fn parse_sha256sums(contents: &str) -> HashMap<String, String> {
     let mut checksums = HashMap::new();
     for line in contents.lines() {
@@ -291,5 +335,50 @@ c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2 *unity-asmdef-l
     fn rejects_malformed_sha256sums() {
         let parsed = parse_sha256sums("not-a-hash  file\n");
         assert!(parsed.is_empty());
+    }
+
+    #[test]
+    fn maps_lemminx_assets_for_supported_platforms() {
+        assert_eq!(
+            lemminx_asset(Os::Linux, Architecture::X8664).unwrap(),
+            "lemminx-linux-x86_64"
+        );
+        assert_eq!(
+            lemminx_asset(Os::Linux, Architecture::Aarch64).unwrap(),
+            "lemminx-linux-aarch_64"
+        );
+        assert_eq!(
+            lemminx_asset(Os::Mac, Architecture::X8664).unwrap(),
+            "lemminx-osx-x86_64"
+        );
+        assert_eq!(
+            lemminx_asset(Os::Mac, Architecture::Aarch64).unwrap(),
+            "lemminx-osx-aarch_64"
+        );
+        assert_eq!(
+            lemminx_asset(Os::Windows, Architecture::X8664).unwrap(),
+            "lemminx-win32"
+        );
+        assert_eq!(
+            lemminx_asset(Os::Windows, Architecture::Aarch64).unwrap(),
+            "lemminx-win32"
+        );
+        assert!(lemminx_asset(Os::Linux, Architecture::X86).is_err());
+    }
+
+    #[test]
+    fn records_a_checksum_for_every_lemminx_asset() {
+        for asset in [
+            "lemminx-linux-x86_64",
+            "lemminx-linux-aarch_64",
+            "lemminx-osx-x86_64",
+            "lemminx-osx-aarch_64",
+            "lemminx-win32",
+        ] {
+            let hash = lemminx_sha256(asset).unwrap();
+            assert_eq!(hash.len(), 64, "{asset}");
+            assert!(hash.bytes().all(|byte| byte.is_ascii_hexdigit()), "{asset}");
+        }
+        assert!(lemminx_sha256("lemminx-unknown").is_err());
     }
 }
