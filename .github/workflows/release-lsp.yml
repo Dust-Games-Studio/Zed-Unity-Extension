@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "unity-asmdef-lsp-v*"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -27,7 +26,7 @@ jobs:
             asset: unity-asmdef-lsp-windows-x86_64.exe
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Test
         run: cargo test --workspace
@@ -52,7 +51,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -61,7 +60,7 @@ jobs:
           cd dist
           sha256sum * > SHA256SUMS
           cat SHA256SUMS
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
