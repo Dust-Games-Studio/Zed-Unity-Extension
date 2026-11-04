@@ -3,7 +3,7 @@ name: Release Assembly Definition LSP
 on:
   push:
     tags:
-      - "unity-asmdef-lsp-v*"
+      - "v*"
 
 permissions:
   contents: write
